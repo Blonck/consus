@@ -5,13 +5,13 @@
 #include <algorithm>
 #include <chrono>
 #include "reweight.hpp"
+#include "HistInfo2D.hpp"
 #include "../DiscreteAxis2D.hpp"
 #include "../vector/helper.hpp"
 #include "../addlogwise.hpp"
 
 namespace consus
 {
-
   
 namespace WHAM2D
 {
@@ -40,30 +40,7 @@ inline bool overlaps(int ffi_first_1, int ffi_first_2, int lfi_first_1,
   return false;
 }
 
-} /* end of namespace consus */
-
-template <class T = double>
-struct HistInfo2D{
-  /// logarithm of sum of all entries
-  T log_length;
-  /// first filled index for first dimension
-  int ffi_first = std::numeric_limits<int>::max();
-  /// last filled index for first dimension
-  int lfi_first = std::numeric_limits<int>::lowest();
-  /// first filled index for second dimension
-  int ffi_second = std::numeric_limits<int>::max();
-  /// last filled index for second dimension
-  int lfi_second = std::numeric_limits<int>::lowest();
-
-  HistInfo2D(){}
-  HistInfo2D(T log_length_, int ffi_first_, int lfi_first_, int ffi_second_,
-             int lfi_second_)
-      : log_length(log_length_),
-        ffi_first(ffi_first_),
-        lfi_first(lfi_first_),
-        ffi_second(ffi_second_),
-        lfi_second(lfi_second_) {}
-};
+} /* end of namespace detail */
 
 template <class T = double>
 std::tuple<DiscreteAxis2D<T>, vec1<HistInfo2D<T>>, vec1<DiscreteAxis2D<T>>>
@@ -187,7 +164,6 @@ T estimate_lnZ_from_hist(const DiscreteAxis2D<T>& Hist,
       }
     }
   }
-  std::cout << "estimate lnZ: " << log_Z_ratio << "\n";
   return log_Z_ratio;
 }
 
@@ -220,7 +196,6 @@ T calc_lnZ(const DiscreteAxis2D<T>& DOS, const HistInfo2D<T>& HistInfo,
                                                     Parameter.second, E2));
       }
     }
-  std::cout << "calc_lnZ single: " << lnZ << "\n";
   return lnZ;
 }
 
@@ -265,11 +240,6 @@ vec1<T> calc_lnZ(const DiscreteAxis2D<T>& DOS,
     }
   }
   normalize_lnZ(lnZ);
-  std::cout << "calc_lnZ: [" ;
-  for (auto &elem: lnZ){
-    std::cout << elem << ", ";
-  }
-  std::cout << "]\n";
   return lnZ;
 }
 
@@ -343,8 +313,6 @@ void calc_logDOS_reduced(const DiscreteAxis2D<T>& Histogram,
   do{
     iterate_logDOS<TEnsemble, T>(Histogram, HistInfo, HistInfos,  Parameters, lnZ, logDOS);
     auto new_lnZ = calc_lnZ<TEnsemble, T>(logDOS, HistInfos, Parameters);
-    std::cout << "old_lnZ: " << print_1d(lnZ) << "\n";
-    std::cout << "new_lnZ: " << print_1d(new_lnZ) << "\n";
     dev = deviation(lnZ, new_lnZ);
     std::swap(lnZ, new_lnZ);
     std::cout << dev << " " << devmax << "\n";

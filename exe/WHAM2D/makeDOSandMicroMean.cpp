@@ -75,7 +75,7 @@ int main(int argc, char const *argv[])
   DiscreteAxis2D<double> Hist;
   HistInfo2D<double> HistInfo;
   std::vector<HistInfo2D<double>> HistInfos;
-  vec1d length_Hists;
+  vec1<double> length_Hists;
   std::vector<DiscreteAxis2D<double>> MicroMeans;
   DiscreteAxis2D<double> DOS;
   Range<double> rangeE1 = {minE1, stepE1, maxE1};
@@ -116,20 +116,20 @@ int main(int argc, char const *argv[])
   normalize_MicroMeans(Hist, MicroMeans);
   calc_logDOS_full<NVT<double>>(Hist, HistInfo, HistInfos, Parameters, devmax, lnZ, logDOS);
 
-  //std::string path("analysis");
-  //std::cout << "RangeE1 " << rangeE1 << "\n";
-  //std::cout << "RangeE2 " << rangeE2 << "\n";
-  //boost::filesystem::create_directories(path);
+  std::string path("analysis");
+  std::cout << "RangeE1 " << rangeE1 << "\n";
+  std::cout << "RangeE2 " << rangeE2 << "\n";
+  boost::filesystem::create_directories(path);
 
-  //dlib::serialize(path + "/rangeE1.obj") << rangeE1;
-  //dlib::serialize(path + "/rangeE2.obj") << rangeE2;
-  //dlib::serialize(path + "/filenames.obj") << filenames;
-  //dlib::serialize(path + "/Hist.obj") << Hist;
-  //dlib::serialize(path + "/lnZ.obj") << lnZ;
-  //dlib::serialize(path + "/logDOS.obj") << DOS;
-  //dlib::serialize(path + "/MicroMeans.obj") << MicroMeans;
-  //dlib::serialize(path + "/header.obj") << header;
-  //dlib::serialize(path + "/HistInfo.obg") << HistInfo;
-  //dlib::serialize(path + "/HistInfos.obg") << HistInfos;
-  //dlib::serialize(path + "/Parameters.obj") << Parameters;
+  dlib::serialize(path + "/rangeE1.obj") << rangeE1;
+  dlib::serialize(path + "/rangeE2.obj") << rangeE2;
+  dlib::serialize(path + "/filenames.obj") << filenames;
+  dlib::serialize(path + "/Hist.obj") << Hist;
+  dlib::serialize(path + "/lnZ.obj") << lnZ;
+  dlib::serialize(path + "/logDOS.obj") << DOS;
+  dlib::serialize(path + "/MicroMeans.obj") << MicroMeans;
+  dlib::serialize(path + "/header.obj") << header;
+  dlib::serialize(path + "/HistInfo.obj") << HistInfo;
+  dlib::serialize(path + "/HistInfos.obj") << HistInfos;
+  dlib::serialize(path + "/Parameters.obj") << Parameters;
 }

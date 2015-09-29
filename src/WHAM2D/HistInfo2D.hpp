@@ -1,0 +1,56 @@
+#pragma once
+
+#include "../definitions.hpp"
+
+namespace consus
+{
+
+namespace WHAM2D
+{
+
+template <class T = double>
+struct HistInfo2D{
+  /// logarithm of sum of all entries
+  T log_length;
+  /// first filled index for first dimension
+  int ffi_first = std::numeric_limits<int>::max();
+  /// last filled index for first dimension
+  int lfi_first = std::numeric_limits<int>::lowest();
+  /// first filled index for second dimension
+  int ffi_second = std::numeric_limits<int>::max();
+  /// last filled index for second dimension
+  int lfi_second = std::numeric_limits<int>::lowest();
+
+  HistInfo2D(){}
+  HistInfo2D(T log_length_, int ffi_first_, int lfi_first_, int ffi_second_,
+             int lfi_second_)
+      : log_length(log_length_),
+        ffi_first(ffi_first_),
+        lfi_first(lfi_first_),
+        ffi_second(ffi_second_),
+        lfi_second(lfi_second_) {}
+};
+
+
+template <class T>
+inline void serialize(const WHAM2D::HistInfo2D<T>& t, std::ostream& out){
+  dlib::serialize(t.log_length, out);
+  dlib::serialize(t.ffi_first, out);
+  dlib::serialize(t.lfi_first, out);
+  dlib::serialize(t.ffi_second, out);
+  dlib::serialize(t.lfi_second, out);
+}
+
+
+template <class T>
+inline void deserialize(WHAM2D::HistInfo2D<T>& t, std::istream& in){
+  dlib::deserialize(t.log_length, in);
+  dlib::deserialize(t.ffi_first, in);
+  dlib::deserialize(t.lfi_first, in);
+  dlib::deserialize(t.ffi_second, in);
+  dlib::deserialize(t.lfi_second, in);
+}
+
+} /* end of namespace WHAM2D */ 
+  
+} /* end of namespace consus */ 
