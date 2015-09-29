@@ -42,6 +42,17 @@ void replace_eigenvalues_header(std::vector<std::string>& header,
   header[Ryz_index] = "k2";
 }
 
+/// replace the entries of a header with ones corresponding to the
+/// eigenvalues of the gyration tensor and invariants of iit
+void add_eigenvalues_header(std::vector<std::string>& header){
+  header.push_back("l1");
+  header.push_back("l2");
+  header.push_back("l3");
+  header.push_back("b");
+  header.push_back("c");
+  header.push_back("k2");
+}
+
 /// calculate the 3 eigenvalues and 3 shape descriptors of the gyration tensor
 /// 
 /// http://en.wikipedia.org/w/index.php?title=Eigenvalue_algorithm&oldid=590404829
@@ -212,10 +223,9 @@ void add_gyr_tensor(vec2<T>& data, std::vector<std::string>& header,
     std::exit(1);
   }
   std::cout << "add eigenvalues to time series\n";
-  eig::replace_eigenvalues_header(header, col_gyr[0], col_gyr[1], col_gyr[2],
-                                  col_gyr[3], col_gyr[4], col_gyr[5]);
-  eig::replace_eigenvalues(data, col_gyr[0], col_gyr[1], col_gyr[2], col_gyr[3],
-                           col_gyr[4], col_gyr[5]);
+  eig::add_eigenvalues_header(header);
+  eig::add_eigenvalues(data, col_gyr[0], col_gyr[1], col_gyr[2], col_gyr[3],
+                       col_gyr[4], col_gyr[5]);
 }
 
 } /* end of namespace consus */

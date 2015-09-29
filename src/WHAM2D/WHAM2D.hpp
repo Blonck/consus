@@ -47,8 +47,7 @@ struct HistInfo2D{
 };
 
 template <class T = double>
-std::tuple<DiscreteAxis2D<T>, vec1<HistInfo2D<T>>,
-           vec1<DiscreteAxis2D<T>>>
+std::tuple<DiscreteAxis2D<T>, vec1<HistInfo2D<T>>, vec1<DiscreteAxis2D<T>>>
 make_histogram2d(const vec2<T>& Timeseries, int col1, int col2,
                  const Range<T>& range1, const Range<T>& range2) {
   DiscreteAxis2D<T> Histogram(range1, range2, 0.0);
@@ -323,36 +322,29 @@ void calc_logDOS_reduced(const DiscreteAxis2D<T>& Histogram,
 /// call with first timeseries
 ///
 /// returns in this order:
-/// Histogram, MicroMeans, HistInfo object of Histogram,
-/// vec1<HistInfo2D> for all individual histograms (in this first step 1 elem
-/// identical to HistInfo), lnZ, first_logDOS
 template <class T = double>
-std::tuple<DiscreteAxis2D<T>, vec1<DiscreteAxis2D<T>>, HistInfo2D<T>,
-           vec1<HistInfo2D<T>>, vec1<T>, DiscreteAxis2D<T>>
-logDOS_iteration_start(const vec2<T>& Timeseries, const int col1,
-                       const int col2, const Range<T>& range1,
-                       const Range<T>& range2, vec1<T>& lnZ,
-                       DiscreteAxis2D<T>& logDOS) {
+void logDOS_iteration_start(const vec2<T>& Timeseries, const int col1,
+                            const int col2, const Range<T>& range1,
+                            const Range<T>& range2, DiscreteAxis2D<T>& Hist,
+                            vec1<DiscreteAxis2D<T>>& MicroMeans,
+                            HistInfo2D<T>& HistInfo,
+                            vec1<HistInfo2D<T>>& HistInfos, vec1<T>& lnZ) {
   assert(lnZ.size() == 1);
-  DiscreteAxis2D<T> Hist;
-  vec1<DiscreteAxis2D<T>> MicroMeans;
-  vec1<HistInfo2D<T>> HistInfos;
   std::tie(Hist, HistInfos, MicroMeans) =
       make_histogram2d(Timeseries, col1, col2, range1, range2);
   assert(HistInfos.size() == 1);
-  HistInfo2D<T> HistInfo = HistInfos[0];
-  return std::make_tuple(Hist, MicroMeans, HistInfo, HistInfos, lnZ, logDOS);
+  HistInfo = HistInfos[0];
 }
 
 template <class T = double>
-std::tuple<DiscreteAxis2D<T>, vec1<DiscreteAxis2D<T>>, HistInfo2D<T>,
-           vec1<HistInfo2D<T>>, vec1<T>, DiscreteAxis2D<T>, vec2<bool>>
-logDOS_iteration_second(const vec2<T>& Timeseries, const int col1,
-                        const int col2, const vec1<std::pair<T, T>>& Parameters,
-                        DiscreteAxis2D<T>& Hist, HistInfo2D<T>& HistInfo,
-                        vec1<HistInfo2D<T>>& HistInfos,
-                        vec1<DiscreteAxis2D<T>>& MicroMeans, vec1<T>& lnZ,
-                        DiscreteAxis2D<T>& logDOS, const T devmax) {
+void logDOS_iteration_second(const vec2<T>& Timeseries, const int col1,
+                             const int col2,
+                             const vec1<std::pair<T, T>>& Parameters,
+                             DiscreteAxis2D<T>& Hist,
+                             vec1<DiscreteAxis2D<T>>& MicroMeans,
+                             HistInfo2D<T>& HistInfo,
+                             vec1<HistInfo2D<T>>& HistInfos, vec1<T>& lnZ,
+                             DiscreteAxis2D<T>& logDOS, const T devmax) {
   assert(Parameters.size() == 2);
   assert(lnZ.size() == 1);
   assert(HistInfos.size() == 1);
@@ -364,19 +356,17 @@ logDOS_iteration_second(const vec2<T>& Timeseries, const int col1,
   assert(lnZ.size() == 2);
   assert(HistInfos.size() == 2);
   assert(Overlaps.size() == 1);
-  calc_logDOS(Hist, HistInfo, HistInfos, Parameters, devmax, lnZ, logDOS);
-  return std::make_tuple(Hist, MicroMeans, HistInfo, HistInfos, lnZ, logDOS, Overlaps);
+  calc_logDOS_reduced(Hist, HistInfo, HistInfos, Parameters, devmax, lnZ, logDOS);
 }
 
 template <class T = double>
-std::tuple<DiscreteAxis2D<T>, vec1<DiscreteAxis2D<T>>, HistInfo2D<T>,
-           vec1<HistInfo2D<T>>, vec1<T>, DiscreteAxis2D<T>, vec2<bool>>
-logDOS_iteration_next(const vec2<T>& Timeseries, const int col1, const int col2,
-            const vec1<std::pair<T, T>>& Parameters, DiscreteAxis2D<T>& Hist,
-            HistInfo2D<T>& HistInfo, vec1<HistInfo2D<T>>& HistInfos,
-            vec1<DiscreteAxis2D<T>>& MicroMeans, vec1<T>& lnZ,
-            DiscreteAxis2D<T>& logDOS, vec2<bool>& Overlaps, const T devmax) {
-  assert(Parameters.size() > 2);
+void logDOS_iteration_next(
+    const vec2<T>& Timeseries, const int col1, const int col2,
+    const vec1<std::pair<T, T>>& Parameters, DiscreteAxis2D<T>& Hist,
+    vec1<DiscreteAxis2D<T>>& MicroMeans, HistInfo2D<T>& HistInfo,
+    vec1<HistInfo2D<T>>& HistInfos, vec1<T>& lnZ, DiscreteAxis2D<T>& logDOS,
+    vec2<bool>& Overlaps, const T devmax) {
+  assert(Parameters.size() = lnZ.size() + 1);
   assert(lnZ.size() > 1);
   assert(HistInfos.size() > 1);
   lnZ.push_back(calc_lnZ(logDOS, HistInfo, Parameters.back()));
@@ -385,7 +375,7 @@ logDOS_iteration_next(const vec2<T>& Timeseries, const int col1, const int col2,
   assert(lnZ.size() > 2);
   assert(HistInfos.size() > 2);
   assert(Overlaps.size() > 1);
-  calc_logDOS(Hist, HistInfo, HistInfos, Parameters, devmax, lnZ, logDOS);
+  calc_logDOS_reduced(Hist, HistInfo, HistInfos, Parameters, devmax, lnZ, logDOS);
   return std::make_tuple(Hist, MicroMeans, HistInfo, HistInfos, lnZ, logDOS, Overlaps);
 }
 
@@ -472,7 +462,7 @@ vec1<T> reweight(const DiscreteAxis2D<T>& DOS, const DiscreteAxis2D<T>& MicroMea
   }
   return tmp;
 }
-//
+
 //double reweight_dT(const DiscreteAxis2D& DOS, const DiscreteAxis2D& MicroMean,
 //                   const double Beta, const double Parameter) {
 //  double min = std::numeric_limits<double>::max();

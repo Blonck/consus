@@ -6,6 +6,7 @@
 #include <chrono>
 #include <iostream>
 #include <string>
+#include <vector>
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/qi_parse.hpp>
@@ -119,7 +120,7 @@ std::vector<std::vector<T>> read_ssv(const std::string& filename,
   }
   content.clear();
 
-  std::vector<std::vector<double>> vT;
+  std::vector<std::vector<T>> vT;
   // transpose data
   if (use_cols.empty()) {
     vT.resize(v[0].size(), vec1d(v.size()));
