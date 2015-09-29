@@ -34,14 +34,14 @@ public:
 public:
   /// constructor
   DiscreteAxis2D();
-  DiscreteAxis2D(const T Center_Min_First, const T Center_Max_First,
+  DiscreteAxis2D(const T Min_First, const T Max_First,
                  const T Step_First, const T Center_Min_Second,
                  const T Center_Max_Second, const T Step_Second,
-                 const T Initial_Value = 0);
+                 const T Initial_Value = 0.0);
   DiscreteAxis2D(const Range<T> &rangeE1, const Range<T> &rangeE2,
-                 const T Initial_Value = 0)
-      : DiscreteAxis2D(rangeE1.start, rangeE1.step, rangeE1.end, rangeE2.start,
-                       rangeE2.step, rangeE2.end, Initial_Value){};
+                 const T Initial_Value = 0.0)
+      : DiscreteAxis2D(rangeE1.start, rangeE1.end, rangeE1.step, rangeE2.start,
+                       rangeE2.end, rangeE2.step, Initial_Value){};
 
   /// return the array index for a set of values
   int get_bin(const T value_first, const T value_second) const;
@@ -124,7 +124,7 @@ public:
   }
 
   Range<T> get_range_first() const {
-    return Range<T>{Center_Min_First_, Step_First_, Max_First_-0.5*Step_First_};
+    return Range<T>{Min_First_, Step_First_, Max_First_};
   }
 
   Range<T> get_range_second() const {
@@ -194,16 +194,16 @@ public:
 
 template <class T>
 DiscreteAxis2D<T>::DiscreteAxis2D(
-    const T Center_Min_First, const T Center_Max_First, const T Step_First,
-    const T Center_Min_Second, const T Center_Max_Second,
+    const T Min_First, const T Max_First, const T Step_First,
+    const T Min_Second, const T Max_Second,
     const T Step_Second, const T Initial_Value)
-    : Min_First_(Center_Min_First - 0.5 + Step_First),
-      Max_First_(Center_Max_First + 0.499 * Step_First),
+    : Min_First_(Min_First),
+      Max_First_(Max_First),
       Step_First_(Step_First),
-      Center_Min_First_(Center_Max_First),
+      Center_Min_First_(Min_First_ + 0.5 * Step_First_),
       Inv_Step_First_(1.0 / Step_First_),
-      Min_Second_(Center_Min_Second - 0.5 + Step_Second_),
-      Max_Second_(Center_Max_Second + 0.499 * Step_Second_),
+      Min_Second_(Min_Second),
+      Max_Second_(Max_Second),
       Step_Second_(Step_Second),
       Center_Min_Second_(Min_Second_ + 0.5 * Step_Second_),
       Inv_Step_Second_(1.0 / Step_Second),
@@ -212,6 +212,10 @@ DiscreteAxis2D<T>::DiscreteAxis2D(
       Num_Bins_Second_(
           static_cast<int>((Max_Second_ - Min_Second_) / Step_Second_) + 1),
       Array_(Num_Bins_First_ * Num_Bins_Second_, Initial_Value) {
+#ifndef NDEBUG
+  std::cerr << "[" << Min_First_ << ", " << Max_First_ << "] [" << Min_Second_
+            << ", " << Max_Second_ << "]\n";
+#endif
   assert(Min_First_ < Max_First_);
   assert(Min_Second_ < Max_Second_);
 

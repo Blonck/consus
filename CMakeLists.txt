@@ -8,7 +8,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -std=c++11")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS} -g")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} -O3 -mtune=native")
 
-FIND_PACKAGE( Boost COMPONENTS filesystem iostreams system regex program_options REQUIRED )
+FIND_PACKAGE( Boost COMPONENTS iostreams system REQUIRED )
 FIND_PACKAGE( OpenMP REQUIRED )
 
 if(OPENMP_FOUND)
@@ -23,6 +23,4 @@ find_package( BZip2 REQUIRED )
 include_directories( ${BZip2_INCLUDE_DIR} )
 include_directories(./extern/dlib/)
 
-add_subdirectory(tests)
 add_subdirectory(exe)
-add_subdirectory(performance)

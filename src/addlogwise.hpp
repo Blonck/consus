@@ -4,9 +4,9 @@
 #include <limits>
 
 template <class T = double>
-struct log_zero{
-  constexpr T operator()() const {return std::numeric_limits<T>::lowest();}
-};
+constexpr T log_zero() {
+  return std::numeric_limits<T>::lowest();
+}
 
 template <class T>
 inline double addlogwise(const T a, const T b) {

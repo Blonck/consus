@@ -5,9 +5,9 @@
 
 #include "../definitions.hpp"
 
-typedef std::vector<prec_t> vec1d;
-typedef std::vector<std::vector<prec_t>> vec2d;
-typedef std::vector<std::vector<std::vector<prec_t>>> vec3d;
+typedef std::vector<double> vec1d;
+typedef std::vector<std::vector<double>> vec2d;
+typedef std::vector<std::vector<std::vector<double>>> vec3d;
 
 template <class T>
 using vec1 = std::vector<T>;
@@ -89,6 +89,17 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& data){
   }
   std::cout << "]";
   return out;
+}
+
+template <class T>
+std::string print_1d(const vec1<T>& vec){
+  std::stringstream ss;
+  ss << "[ ";
+  for (size_t i = 0; i < vec.size()-1; ++i){
+    ss << vec[i] << ", ";
+  }
+  ss << vec.back() << "]";
+  return ss.str();
 }
 
 template <class T>
