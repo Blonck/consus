@@ -6,23 +6,17 @@
 #include <chrono>
 #include "reweight.hpp"
 #include "HistInfo2D.hpp"
+#include "Ensemble.hpp"
 #include "../DiscreteAxis2D.hpp"
 #include "../vector/helper.hpp"
 #include "../addlogwise.hpp"
 
 namespace consus
 {
-  
+
+/// everthing one need to calculate the 2 dimensional density of states dependent on two variables
 namespace WHAM2D
 {
-
-/// H = \beta ( H_0 + \lambda H_1 )
-template <class T = double>
-struct NVT{
-  static T log_weight(const T Beta, const T E0, const T Lambda, const T E1){
-    return -1.0 * Beta * (E0 + Lambda * E1);
-  }
-};
 
 namespace detail {
 
@@ -42,14 +36,13 @@ inline bool overlaps(int ffi_first_1, int ffi_first_2, int lfi_first_1,
 
 } /* end of namespace detail */
 
-template <class T = double>
-std::tuple<DiscreteAxis2D<T>, vec1<HistInfo2D<T>>, vec1<DiscreteAxis2D<T>>>
-make_histogram2d(const vec2<T>& Timeseries, int col1, int col2,
-                 const Range<T>& range1, const Range<T>& range2) {
-  DiscreteAxis2D<T> Histogram(range1, range2, 0.0);
-  vec1<DiscreteAxis2D<T>> MicroMeans(Timeseries.size(),
-                                     DiscreteAxis2D<T>(range1, range2));
-  vec1<HistInfo2D<T>> HistInfos;
+std::tuple<DiscreteAxis2D, vec1<HistInfo2D>, vec1<DiscreteAxis2D>>
+make_histogram2d(const vec2<double>& Timeseries, int col1, int col2,
+                 const Range& range1, const Range& range2) {
+  DiscreteAxis2D Histogram(range1, range2, 0.0);
+  vec1<DiscreteAxis2D> MicroMeans(Timeseries.size(),
+                                     DiscreteAxis2D(range1, range2));
+  vec1<HistInfo2D> HistInfos;
   int ffi_first = std::numeric_limits<int>::max();
   int lfi_first = std::numeric_limits<int>::lowest();
   int ffi_second = std::numeric_limits<int>::max();
@@ -67,19 +60,17 @@ make_histogram2d(const vec2<T>& Timeseries, int col1, int col2,
       MicroMeans[k][index] += Timeseries[k][j];
     }
   }
-  T log_length = std::log(Timeseries[col1].size());
-  HistInfo2D<T> lastHistInfo(log_length, ffi_first, lfi_first, ffi_second,
-                             lfi_second);
+  double log_length = std::log(Timeseries[col1].size());
+  HistInfo2D lastHistInfo(log_length, ffi_first, lfi_first, ffi_second,
+                          lfi_second);
   HistInfos.push_back(lastHistInfo);
   return std::make_tuple(Histogram, HistInfos, MicroMeans);
 }
 
-template <class T = double>
-void add_histogram2d(const vec2<T>& Timeseries, int col1, int col2,
-                     DiscreteAxis2D<T>& Histogram, HistInfo2D<T>& HistInfo,
-                     vec1<HistInfo2D<T>>& HistInfos,
-                     vec1<DiscreteAxis2D<T>>& MicroMeans,
-                     vec2<bool>& Overlaps) {
+void add_histogram2d(const vec2<double>& Timeseries, int col1, int col2,
+                     DiscreteAxis2D& Histogram, HistInfo2D& HistInfo,
+                     vec1<HistInfo2D>& HistInfos,
+                     vec1<DiscreteAxis2D>& MicroMeans) {
   int ffi_first = std::numeric_limits<int>::max();
   int lfi_first = std::numeric_limits<int>::lowest();
   int ffi_second = std::numeric_limits<int>::max();
@@ -97,17 +88,6 @@ void add_histogram2d(const vec2<T>& Timeseries, int col1, int col2,
       MicroMeans[k][index] += Timeseries[k][j];
     }
   }
-  vec1<bool> ThisOverlap;
-  for (auto& hist: HistInfos){
-    if (detail::overlaps(ffi_first, hist.ffi_first, lfi_first, hist.lfi_first,
-                         ffi_second, hist.ffi_second, lfi_second,
-                         hist.lfi_second)) {
-      ThisOverlap.push_back(true);
-    }else{
-      ThisOverlap.push_back(false);
-    }
-  }
-  Overlaps.push_back(ThisOverlap);
   HistInfo.ffi_first = std::min(ffi_first, HistInfo.ffi_first);
   HistInfo.lfi_first = std::max(lfi_first, HistInfo.lfi_first);
   HistInfo.ffi_second = std::min(ffi_second, HistInfo.ffi_second);
@@ -120,9 +100,9 @@ void add_histogram2d(const vec2<T>& Timeseries, int col1, int col2,
 }
 
 // normalizes micronanoical mean values
-template <class T = double>
-void normalize_MicroMeans(DiscreteAxis2D<T>& Histogram,
-                          vec1<DiscreteAxis2D<T>>& MicroMeans) {
+void normalize_MicroMeans(DiscreteAxis2D& Histogram,
+                          vec1<DiscreteAxis2D>& MicroMeans) {
+  //TODO: pargma parallel
   for (size_t i = 0; i < MicroMeans.size(); ++i){
     for (int j = 0; j < MicroMeans[i].get_num_bins_first(); ++j){
       for (int k = 0; k < MicroMeans[i].get_num_bins_second(); ++k){
@@ -142,18 +122,19 @@ void normalize_MicroMeans(DiscreteAxis2D<T>& Histogram,
 /// HistInfo - info object for Hist
 /// Parameter - parameters for Hist
 /// Parameter_Target - lnZ is estimated for this parameters
-template <class TEnsemble, class T = double>
-T estimate_lnZ_from_hist(const DiscreteAxis2D<T>& Hist,
-                         const HistInfo2D<T>& HistInfo,
-                         const std::pair<T, T>& Parameter,
-                         const std::pair<T, T>& Parameter_Target) {
-  auto log_Z_ratio = log_zero<T>();
+template <class TEnsemble>
+double estimate_lnZ_from_hist(const DiscreteAxis2D& Hist,
+                         const HistInfo2D& HistInfo,
+                         const std::pair<double, double>& Parameter,
+                         const std::pair<double, double>& Parameter_Target) {
+  auto log_Z_ratio = log_zero<double>();
+  //TODO: maybe pragmw with log_Z_ratio shared
   for (int i = HistInfo.ffi_first; i < HistInfo.lfi_first; ++i) {
     auto E1 = Hist.get_value_first(i);
     for (int j = HistInfo.ffi_second; j < HistInfo.lfi_second; ++j) {
       auto E2 = Hist.get_value_second(j);
       auto index = Hist.get_index(i, j);
-      if (Hist[index] != T(0.0)) {
+      if (Hist[index] != 0.0) {
         log_Z_ratio =
             addlogwise(log_Z_ratio,
                        std::log(Hist[index]) +
@@ -167,25 +148,24 @@ T estimate_lnZ_from_hist(const DiscreteAxis2D<T>& Hist,
   return log_Z_ratio;
 }
 
-template <class T = double>
-void normalize_lnZ(vec1<T>& lnZ){
+void normalize_lnZ(vec1<double>& lnZ){
   for (size_t i = 1; i < lnZ.size(); ++i) {
     lnZ[i] -= lnZ[0];
   }
   lnZ[0] = 0;
 }
 
-template <class T = double>
-void normalize_logDOS(DiscreteAxis2D<T>& logDOS, const vec1<T>& lnZ) {
+void normalize_logDOS(DiscreteAxis2D& logDOS, const vec1<double>& lnZ) {
+#pragma omp parallel for
   for (int i = 0; i < logDOS.size(); ++i) {
     logDOS[i] -= lnZ[0];
   }
 }
 
-template <class TEnsemble, class T = double>
-T calc_lnZ(const DiscreteAxis2D<T>& DOS, const HistInfo2D<T>& HistInfo,
-                 const std::pair<T, T>& Parameter) {
-  T lnZ = log_zero<T>();
+template <class TEnsemble>
+double calc_lnZ(const DiscreteAxis2D& DOS, const HistInfo2D& HistInfo,
+                 const std::pair<double, double>& Parameter) {
+  double lnZ = log_zero<double>();
     for (int i = HistInfo.ffi_first; i < HistInfo.lfi_first; ++i) {
       auto E1 = DOS.get_value_first(i);
       for (int j = HistInfo.ffi_second; j < HistInfo.lfi_second; ++j) {
@@ -200,10 +180,10 @@ T calc_lnZ(const DiscreteAxis2D<T>& DOS, const HistInfo2D<T>& HistInfo,
 }
 
 /// TODO: use HistInfos for each parameter instead of whole area from HistInfo
-template <class TEnsemble, class T = double>
-vec1<T> calc_lnZ(const DiscreteAxis2D<T>& DOS, const HistInfo2D<T>& HistInfo,
-                 const vec1<std::pair<T, T>>& Parameters) {
-  vec1<T> lnZ(Parameters.size(), log_zero<T>());
+template <class TEnsemble>
+vec1<double> calc_lnZ(const DiscreteAxis2D& DOS, const HistInfo2D& HistInfo,
+                      const vec1<std::pair<double, double>>& Parameters) {
+  vec1<double> lnZ(Parameters.size(), log_zero<double>());
 #pragma omp parallel for
   for (size_t k = 0; k < Parameters.size(); ++k) {
     for (int i = HistInfo.ffi_first; i < HistInfo.lfi_first; ++i) {
@@ -221,11 +201,11 @@ vec1<T> calc_lnZ(const DiscreteAxis2D<T>& DOS, const HistInfo2D<T>& HistInfo,
   return lnZ;
 }
 
-template <class TEnsemble, class T = double>
-vec1<T> calc_lnZ(const DiscreteAxis2D<T>& DOS,
-                 const vec1<HistInfo2D<T>>& HistInfos,
-                 const vec1<std::pair<T, T>>& Parameters) {
-  vec1<T> lnZ(Parameters.size(), log_zero<T>());
+template <class TEnsemble>
+vec1<double> calc_lnZ(const DiscreteAxis2D& DOS,
+                 const vec1<HistInfo2D>& HistInfos,
+                 const vec1<std::pair<double, double>>& Parameters) {
+  vec1<double> lnZ(Parameters.size(), log_zero<double>());
 #pragma omp parallel for
   for (size_t k = 0; k < Parameters.size(); ++k) {
     for (int i = HistInfos[k].ffi_first; i < HistInfos[k].lfi_first; ++i) {
@@ -244,30 +224,29 @@ vec1<T> calc_lnZ(const DiscreteAxis2D<T>& DOS,
 }
 
 /// assumption lnZ[0] = 0
-template <class T = double>
-T deviation(const vec1<T>& lnZ_old, const vec1<T>& lnZ_new) {
-  auto dev = T(0.0);
+double deviation(const vec1<double>& lnZ_old, const vec1<double>& lnZ_new) {
+  auto dev = 0.0;
   for (size_t i = 1; i < lnZ_old.size(); ++i) {
-    T tmp = (lnZ_new[i] - lnZ_old[i]) / lnZ_new[i];
+    double tmp = (lnZ_new[i] - lnZ_old[i]) / lnZ_new[i];
     dev += tmp * tmp;
   }
   dev = std::sqrt(dev) / lnZ_old.size();
   return dev;
 }
 
-template <class TEnsemble, class T = double>
-void iterate_logDOS(const DiscreteAxis2D<T>& Histogram,
-                 const HistInfo2D<T>& HistInfo,
-                 const vec1<HistInfo2D<T>>& HistInfos,
-                 const vec1<std::pair<T, T>>& Parameters, const vec1<T>& lnZ,
-                 DiscreteAxis2D<T>& logDOS) {
+template <class TEnsemble>
+void iterate_logDOS(const DiscreteAxis2D& Histogram,
+                 const HistInfo2D& HistInfo,
+                 const vec1<HistInfo2D>& HistInfos,
+                 const vec1<std::pair<double, double>>& Parameters, const vec1<double>& lnZ,
+                 DiscreteAxis2D& logDOS) {
 #pragma omp parallel for
   for (auto i = HistInfo.ffi_first; i < HistInfo.lfi_first; ++i) {
     auto E1 = logDOS.get_value_first(i);
     for (auto j = HistInfo.ffi_second; j < HistInfo.lfi_second; ++j) {
       auto E2 = logDOS.get_value_second(j);
       auto index = logDOS.get_index(i, j);
-      auto tmp = log_zero<T>();
+      auto tmp = log_zero<double>();
       for (size_t k = 0; k < lnZ.size(); ++k) {
         tmp = addlogwise(tmp,
                          HistInfos[k].log_length +
@@ -278,41 +257,50 @@ void iterate_logDOS(const DiscreteAxis2D<T>& Histogram,
       if (Histogram[index] != 0) {
         logDOS[index] = std::log(Histogram[index]) - tmp;
       } else {
-        logDOS[index] = log_zero<T>() - tmp;
+        logDOS[index] = log_zero<double>() - tmp;
       }
     }
   }
 }
 
-template <class TEnsemble, class T = double>
-void calc_logDOS_full(const DiscreteAxis2D<T>& Histogram,
-                      const HistInfo2D<T>& HistInfo,
-                      const vec1<HistInfo2D<T>>& HistInfos,
-                      const vec1<std::pair<T, T>>& Parameters,
-                      const double devmax, vec1<T>& lnZ,
-                      DiscreteAxis2D<T>& logDOS) {
-  T dev;
+template <class TEnsemble>
+void calc_logDOS_full(const DiscreteAxis2D& Histogram,
+                      const HistInfo2D& HistInfo,
+                      const vec1<HistInfo2D>& HistInfos,
+                      const vec1<std::pair<double, double>>& Parameters,
+                      const double devmax, const int min_iteration,
+                      vec1<double>& lnZ, DiscreteAxis2D& logDOS) {
+  double dev;
+  for (int i = 0; i < min_iteration; ++i){
+    iterate_logDOS<TEnsemble>(Histogram, HistInfo, HistInfos,  Parameters, lnZ, logDOS);
+    auto new_lnZ = calc_lnZ<TEnsemble>(logDOS, HistInfo, Parameters);
+    dev = deviation(lnZ, new_lnZ);
+    std::swap(lnZ, new_lnZ);
+    std::cout << dev << " " << devmax << " - forced\n";
+  }
   do{
-    iterate_logDOS<TEnsemble, T>(Histogram, HistInfo, HistInfos,  Parameters, lnZ, logDOS);
-    auto new_lnZ = calc_lnZ<TEnsemble, T>(logDOS, HistInfo, Parameters);
+    iterate_logDOS<TEnsemble>(Histogram, HistInfo, HistInfos,  Parameters, lnZ, logDOS);
+    auto new_lnZ = calc_lnZ<TEnsemble>(logDOS, HistInfo, Parameters);
     dev = deviation(lnZ, new_lnZ);
     std::swap(lnZ, new_lnZ);
     std::cout << dev << " " << devmax << "\n";
   } while(dev > devmax);
+
   normalize_logDOS(logDOS, lnZ);
 }
 
-template <class TEnsemble, class T = double>
-void calc_logDOS_reduced(const DiscreteAxis2D<T>& Histogram,
-                         const HistInfo2D<T>& HistInfo,
-                         const vec1<HistInfo2D<T>>& HistInfos,
-                         const vec1<std::pair<T, T>>& Parameters,
-                         const double devmax, vec1<T>& lnZ,
-                         DiscreteAxis2D<T>& logDOS) {
-  T dev;
+template <class TEnsemble>
+void calc_logDOS_reduced(const DiscreteAxis2D& Histogram,
+                         const HistInfo2D& HistInfo,
+                         const vec1<HistInfo2D>& HistInfos,
+                         const vec1<std::pair<double, double>>& Parameters,
+                         const double devmax, vec1<double>& lnZ,
+                         DiscreteAxis2D& logDOS) {
+  double dev;
   do{
-    iterate_logDOS<TEnsemble, T>(Histogram, HistInfo, HistInfos,  Parameters, lnZ, logDOS);
-    auto new_lnZ = calc_lnZ<TEnsemble, T>(logDOS, HistInfos, Parameters);
+    iterate_logDOS<TEnsemble>(Histogram, HistInfo, HistInfos, Parameters, lnZ,
+                              logDOS);
+    auto new_lnZ = calc_lnZ<TEnsemble>(logDOS, HistInfos, Parameters);
     dev = deviation(lnZ, new_lnZ);
     std::swap(lnZ, new_lnZ);
     std::cout << dev << " " << devmax << "\n";
@@ -323,13 +311,12 @@ void calc_logDOS_reduced(const DiscreteAxis2D<T>& Histogram,
 /// call with first timeseries
 ///
 /// returns in this order:
-template <class T = double>
-void logDOS_iteration_start(const vec2<T>& Timeseries, const int col1,
-                            const int col2, const Range<T>& range1,
-                            const Range<T>& range2, DiscreteAxis2D<T>& Hist,
-                            vec1<DiscreteAxis2D<T>>& MicroMeans,
-                            HistInfo2D<T>& HistInfo,
-                            vec1<HistInfo2D<T>>& HistInfos, vec1<T>& lnZ) {
+void logDOS_iteration_start(const vec2<double>& Timeseries, const int col1,
+                            const int col2, const Range& range1,
+                            const Range& range2, DiscreteAxis2D& Hist,
+                            vec1<DiscreteAxis2D>& MicroMeans,
+                            HistInfo2D& HistInfo,
+                            vec1<HistInfo2D>& HistInfos, vec1<double>& lnZ) {
   assert(lnZ.size() == 1);
   std::tie(Hist, HistInfos, MicroMeans) =
       make_histogram2d(Timeseries, col1, col2, range1, range2);
@@ -337,165 +324,46 @@ void logDOS_iteration_start(const vec2<T>& Timeseries, const int col1,
   HistInfo = HistInfos[0];
 }
 
-template <class TEnsemble, class T = double>
-void logDOS_iteration_second(const vec2<T>& Timeseries, const int col1,
+template <class TEnsemble>
+void logDOS_iteration_second(const vec2<double>& Timeseries, const int col1,
                              const int col2,
-                             const vec1<std::pair<T, T>>& Parameters,
-                             DiscreteAxis2D<T>& Hist,
-                             vec1<DiscreteAxis2D<T>>& MicroMeans,
-                             HistInfo2D<T>& HistInfo,
-                             vec1<HistInfo2D<T>>& HistInfos, vec1<T>& lnZ,
-                             DiscreteAxis2D<T>& logDOS, vec2<bool>& Overlaps, const T devmax) {
+                             const vec1<std::pair<double, double>>& Parameters,
+                             const double devmax, DiscreteAxis2D& Hist,
+                             vec1<DiscreteAxis2D>& MicroMeans,
+                             HistInfo2D& HistInfo,
+                             vec1<HistInfo2D>& HistInfos, vec1<double>& lnZ,
+                             DiscreteAxis2D& logDOS) {
   assert(Parameters.size() == 2);
   assert(lnZ.size() == 1);
   assert(HistInfos.size() == 1);
-  lnZ.push_back(lnZ[0] + estimate_lnZ_from_hist<TEnsemble, T>(Hist, HistInfo, Parameters[0],
+  lnZ.push_back(lnZ[0] + estimate_lnZ_from_hist<TEnsemble>(Hist, HistInfo, Parameters[0],
                                                 Parameters[1]));
-  add_histogram2d(Timeseries, col1, col2, Hist, HistInfo, HistInfos, MicroMeans,
-                  Overlaps);
+  add_histogram2d(Timeseries, col1, col2, Hist, HistInfo, HistInfos, MicroMeans);
   assert(lnZ.size() == 2);
   assert(HistInfos.size() == 2);
-  assert(Overlaps.size() == 1);
-  calc_logDOS_reduced<TEnsemble, T>(Hist, HistInfo, HistInfos, Parameters,
-                                    devmax, lnZ, logDOS);
+  calc_logDOS_reduced<TEnsemble>(Hist, HistInfo, HistInfos, Parameters, devmax,
+                                 lnZ, logDOS);
 }
 
-template <class TEnsemble, class T = double>
-void logDOS_iteration_next(
-    const vec2<T>& Timeseries, const int col1, const int col2,
-    const vec1<std::pair<T, T>>& Parameters, DiscreteAxis2D<T>& Hist,
-    vec1<DiscreteAxis2D<T>>& MicroMeans, HistInfo2D<T>& HistInfo,
-    vec1<HistInfo2D<T>>& HistInfos, vec1<T>& lnZ, DiscreteAxis2D<T>& logDOS,
-    vec2<bool>& Overlaps, const T devmax) {
+template <class TEnsemble>
+void logDOS_iteration_next(const vec2<double>& Timeseries, const int col1,
+                           const int col2, const double devmax,
+                           const vec1<std::pair<double, double>>& Parameters,
+                           DiscreteAxis2D& Hist,
+                           vec1<DiscreteAxis2D>& MicroMeans,
+                           HistInfo2D& HistInfo, vec1<HistInfo2D>& HistInfos,
+                           vec1<double>& lnZ, DiscreteAxis2D& logDOS) {
   assert(Parameters.size() == lnZ.size() + 1);
   assert(lnZ.size() > 1);
   assert(HistInfos.size() > 1);
-  lnZ.push_back(calc_lnZ<TEnsemble, T>(logDOS, HistInfo, Parameters.back()));
-  add_histogram2d(Timeseries, col1, col2, Hist, HistInfo, HistInfos, MicroMeans,
-                  Overlaps);
+  lnZ.push_back(calc_lnZ<TEnsemble>(logDOS, HistInfo, Parameters.back()));
+  add_histogram2d(Timeseries, col1, col2, Hist, HistInfo, HistInfos, MicroMeans);
   assert(lnZ.size() > 2);
   assert(HistInfos.size() > 2);
-  assert(Overlaps.size() > 1);
-  calc_logDOS_reduced<TEnsemble, T>(Hist, HistInfo, HistInfos, Parameters, devmax, lnZ, logDOS);
+  calc_logDOS_reduced<TEnsemble>(Hist, HistInfo, HistInfos, Parameters, devmax,
+                                 lnZ, logDOS);
 }
-//double reweight_dT(const DiscreteAxis2D& DOS, const DiscreteAxis2D& MicroMean,
-//                   const double Beta, const double Parameter) {
-//  double min = std::numeric_limits<double>::max();
-//  double minE = std::numeric_limits<double>::max();
-//  double minOE = std::numeric_limits<double>::max();
-//  for (int i = 0; i < DOS.get_NumBins_first(); ++i) {
-//    const double E1 = DOS.get_Value_first(i);
-//    for (int j = 0; j < DOS.get_NumBins_second(); ++j) {
-//      const int index = DOS.get_index(i, j);
-//      if (std::isfinite(MicroMean[index])) {
-//        const double E2 = DOS.get_Value_second(j);
-//        min = std::min(min, MicroMean[index]);
-//        minE = std::min(minE, E1 + Parameter * E2);
-//        minOE = std::min(minOE, MicroMean[index] * (E1 + Parameter *E2));
-//      }
-//    }
-//  }
-//  double shiftO = min - 0.1;
-//  double shiftE = minE - 0.1;
-//  double shiftOE = minOE - 0.1;
-//
-//  double lnZ = LOGZERO;
-//  for (int i = 0; i < DOS.get_NumBins_first(); ++i){
-//    const double E1 = DOS.get_Value_first(i);
-//    for (int j = 0; j < DOS.get_NumBins_second(); ++j){
-//      const double E2 = DOS.get_Value_second(j);
-//      const int index = DOS.get_index(i, j);
-//      if (std::isfinite(DOS[index])){
-//        lnZ = addlogwise(lnZ, DOS[index] - Beta * (E1 + Parameter * E2));
-//      }
-//    }
-//  }
-//
-//  double O = LOGZERO;
-//  double OE = LOGZERO;
-//  double E = LOGZERO;
-//  for (int i = 0; i < DOS.get_NumBins_first(); ++i){
-//    const double e1 = DOS.get_Value_first(i);
-//    for (int j = 0; j < DOS.get_NumBins_second(); ++j){
-//      const double e2 = DOS.get_Value_second(j);
-//      const int index = DOS.get_index(i, j);
-//      if (std::isfinite(DOS[index]) and std::isfinite(MicroMean[index])) {
-//        double tmp = DOS[index] - Beta * (e1 + Parameter * e2) - lnZ;
-//        O = addlogwise(O, tmp + std::log(MicroMean[index] - shiftO));
-//        OE = addlogwise(
-//            OE,
-//            tmp + std::log((e1 + Parameter * e2) * MicroMean[index] - shiftOE));
-//        E = addlogwise(E, tmp + std::log((e1 + Parameter * e2) - shiftE));
-//      }
-//    }
-//  }
-//  O = std::exp(O) + shiftO;
-//  OE = std::exp(OE) + shiftOE;
-//  E = std::exp(E) + shiftE;
-//  return Beta * Beta * ( OE - O * E );
-//}
-//
-//vec1d reweight_dT(const DiscreteAxis2D& DOS, const DiscreteAxis2D& MicroMean,
-//                  const vec1d& Betas, const double Parameter) {
-//  double min = std::numeric_limits<double>::max();
-//  double minE = std::numeric_limits<double>::max();
-//  double minOE = std::numeric_limits<double>::max();
-//  for (int i = 0; i < DOS.get_NumBins_first(); ++i) {
-//    const double E1 = DOS.get_Value_first(i);
-//    for (int j = 0; j < DOS.get_NumBins_second(); ++j) {
-//      const int index = DOS.get_index(i, j);
-//      if (std::isfinite(MicroMean[index])) {
-//        const double E2 = DOS.get_Value_second(j);
-//        min = std::min(min, MicroMean[index]);
-//        minE = std::min(minE, E1 + Parameter * E2);
-//        minOE = std::min(minOE, MicroMean[index] * (E1 + Parameter *E2));
-//      }
-//    }
-//  }
-//  double shiftO = min - 0.1;
-//  double shiftE = minE - 0.1;
-//  double shiftOE = minOE - 0.1;
-//
-//  vec1d result(Betas.size());
-//
-//  for (size_t k = 0; k < Betas.size(); ++k){
-//    double lnZ = LOGZERO;
-//    double O = LOGZERO;
-//    double OE = LOGZERO;
-//    double E = LOGZERO;
-//    for (int i = 0; i < DOS.get_NumBins_first(); ++i){
-//      const double E1 = DOS.get_Value_first(i);
-//      for (int j = 0; j < DOS.get_NumBins_second(); ++j){
-//        const double E2 = DOS.get_Value_second(j);
-//        const int index = DOS.get_index(i, j);
-//        if (std::isfinite(DOS[index])){
-//          lnZ = addlogwise(lnZ, DOS[index] - Betas[k] * (E1 + Parameter * E2));
-//        }
-//      }
-//    }
-//
-//    for (int i = 0; i < DOS.get_NumBins_first(); ++i){
-//      const double e1 = DOS.get_Value_first(i);
-//      for (int j = 0; j < DOS.get_NumBins_second(); ++j){
-//        const double e2 = DOS.get_Value_second(j);
-//        const int index = DOS.get_index(i, j);
-//        if (std::isfinite(DOS[index]) and std::isfinite(MicroMean[index])) {
-//          double tmp = DOS[index] - Betas[k] * (e1 + Parameter * e2) - lnZ;
-//          double tmpE = e1 + Parameter * e2;
-//          O = addlogwise(O, tmp + std::log(MicroMean[index] - shiftO));
-//          OE =
-//              addlogwise(OE, tmp + std::log(tmpE * MicroMean[index] - shiftOE));
-//          E = addlogwise(E, tmp + std::log(tmpE - shiftE));
-//        }
-//      }
-//    }
-//    O = std::exp(O) + shiftO;
-//    OE = std::exp(OE) + shiftOE;
-//    E = std::exp(E) + shiftE;
-//    result[k] = Betas[k] * Betas[k] * ( OE - O * E );
-//  }
-//  return result;
-//}
+
 //
 //double reweight_dT2(const DiscreteAxis2D& DOS, const DiscreteAxis2D& MicroMean,
 //                    const double Beta, const double Parameter) {

@@ -7,28 +7,24 @@
 namespace consus
 {
 
-template <class T = double>
 struct Range{
-  T start;
-  T step;
-  T end;
+  double start;
+  double step;
+  double end;
 };
 
-template <class T>
-std::ostream& operator<<(std::ostream& out, const Range<T>& range){
+std::ostream& operator<<(std::ostream& out, const Range& range){
   out << range.start << ":" << range.step << ":" << range.end;
   return out;
 }
 
-template <class T>
-inline void serialize(const Range<T>& t, std::ostream& out){
+inline void serialize(const Range& t, std::ostream& out){
     serialize(t.start, out);
     serialize(t.step, out);
     serialize(t.end, out);
 }
 
-template <class T>
-inline void deserialize(Range<T>& t, std::istream& in){
+inline void deserialize(Range& t, std::istream& in){
     deserialize(t.start, in);
     deserialize(t.step, in);
     deserialize(t.end, in);

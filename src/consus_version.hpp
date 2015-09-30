@@ -1,0 +1,1 @@
+#define GITHASH_CONSUS "abd617af38981f3ccac1fcb38a3047e6512adf3f"
