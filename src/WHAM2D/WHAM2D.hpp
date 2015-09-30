@@ -203,8 +203,8 @@ vec1<double> calc_lnZ(const DiscreteAxis2D& DOS, const HistInfo2D& HistInfo,
 
 template <class TEnsemble>
 vec1<double> calc_lnZ(const DiscreteAxis2D& DOS,
-                 const vec1<HistInfo2D>& HistInfos,
-                 const vec1<std::pair<double, double>>& Parameters) {
+                      const vec1<HistInfo2D>& HistInfos,
+                      const vec1<std::pair<double, double>>& Parameters) {
   vec1<double> lnZ(Parameters.size(), log_zero<double>());
 #pragma omp parallel for
   for (size_t k = 0; k < Parameters.size(); ++k) {

@@ -53,11 +53,11 @@ int main(int argc, char const *argv[])
 
   std::cout << header << "\n";
 
-#pragma omp parallel for
   for (size_t column = 0; column < header.size(); ++column) {
     std::cout << "reweighting " << header[column] << "\n";
+    #pragma omp parallel for
     for (size_t j = 0; j < Betas.size(); ++j) {
-      results[j] = reweight<NVT>(DOS, MicroMeans[column], {Betas[j], Kappa});
+      results[j] = reweight_dT<NVT>(DOS, MicroMeans[column], {Betas[j], Kappa});
     }
 
     vec1d jk_means(Temperatures.size());
@@ -77,9 +77,10 @@ int main(int argc, char const *argv[])
           dlib::deserialize(jk_paths[i] + "/logDOS.obj") >> DOS;
           dlib::deserialize(jk_paths[i] + "/header.obj") >> header;
           dlib::deserialize(jk_paths[i] + "/MicroMeans.obj") >> MicroMeans;
+          #pragma omp parallel for
           for (size_t j = 0; j < Betas.size(); ++j) {
             results_jk[j][i] =
-                reweight<NVT>(DOS, MicroMeans[column], {Betas[j], Kappa});
+                reweight_dT<NVT>(DOS, MicroMeans[column], {Betas[j], Kappa});
           }
         }
       }
@@ -120,10 +121,10 @@ int main(int argc, char const *argv[])
     std::string path_files = path_kappa + "/" + std::to_string(Kappa);
     boost::filesystem::create_directories(path_files);
     std::string filename =
-        path_files + "/" + replacediv(header[column]) + ".dat";
+        path_files + "/" + replacediv(header[column]) + "_dT.dat";
     std::ofstream out(filename, std::ios::trunc);
-    out << "#Temperature " << header[column] << " "
-        << "error(" << header[column] << ")\n";
+    out << "#Temperature " << header[column] << "_dT "
+        << "error(" << header[column] << "_dT)\n";
     for (size_t j = 0; j < Temperatures.size(); ++j) {
       out << Temperatures[j] << " " << results[j] << " " << jk_error[j] << "\n";
     }

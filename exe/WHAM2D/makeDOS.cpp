@@ -192,4 +192,5 @@ int main(int argc, char const *argv[])
   dlib::serialize(path + "/HistInfo.obj") << HistInfo;
   dlib::serialize(path + "/HistInfos.obj") << HistInfos;
   dlib::serialize(path + "/Parameters.obj") << Parameters;
+  dlib::serialize(path + "/add_eigenvalues.obj") << add_eig;
 }

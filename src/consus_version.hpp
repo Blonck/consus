@@ -1,1 +1,1 @@
-#define GITHASH_CONSUS "abd617af38981f3ccac1fcb38a3047e6512adf3f"
+#define GITHASH_CONSUS "Not all changes commited, last commit: f6bfeec79ff21af2e4ff5995b9be996e2c8d36ae"
