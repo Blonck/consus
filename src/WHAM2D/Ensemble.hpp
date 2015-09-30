@@ -31,7 +31,18 @@ struct NPT{
     return E + p * std::exp(logV);
   }
 };
-  
+
+// logW = (3*N - 2)/2 * log(E_t - (E_p + p V))
+struct NPH{
+  static double N;
+  static double log_weight(const double E_t, const double E_p,
+                           const double p, const double logV){
+    return (1.5*N - 1.0) * std::log(E_t - (E_p + p * std::exp(logV)));
+  }
+};
+
+double NPH::N = 1.0;
+
 } /* end of namespace WHAM2D */ 
   
 } /* end of namespace consus */ 
