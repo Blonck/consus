@@ -19,26 +19,25 @@ namespace consus
 ///
 /// values corresponds to the x-value
 /// entry corresponds to the y-value
-template <class T = double>
 class DiscreteAxis
 {
   public:
-   typedef typename std::vector<T>::const_iterator const_iterator;
-   typedef typename std::vector<T>::iterator iterator;
+   typedef typename std::vector<double>::const_iterator const_iterator;
+   typedef typename std::vector<double>::iterator iterator;
 
    public:
     /// Minimal value (not center of first bin)
-    T Min_;
+    double Min_;
     /// bin width
-    T Step_;
+    double Step_;
     /// inverse Step_ width
-    T Inv_Step_;
+    double Inv_Step_;
     /// number of
     int Num_Bins_;
     /// Max_imal value (not center of last bin)
-    T Max_;
+    double Max_;
     /// internal array, stores a number for each bin
-    std::vector<T> Array_;
+    std::vector<double> Array_;
 
   public:
    /// construct an Array over a discretized range [Min, Max + e[
@@ -47,12 +46,12 @@ class DiscreteAxis
    /// \param Max - the upper bound will be the next possible value
    ///               greater or euqal then Max
    /// \param Step - bin width of every bin
-   DiscreteAxis(const T Center_Min, const T Center_Max, const T Step,
-                const T Initial_Value = 0.0)
-       : Min_(Center_Min - 0.5 * Step),
+   DiscreteAxis(const double Min, const double Max, const double Step,
+                const double Initial_Value = 0.0)
+       : Min_(Min),
          Step_(Step),
          Inv_Step_(1.0 / Step),
-         Num_Bins_(calc_num_bins(Min_, Step, Center_Max)),
+         Num_Bins_(calc_num_bins(Min_, Step, Max)),
          Max_(Min_ + (Num_Bins_) * Step_),
          Array_(Num_Bins_, Initial_Value) {
       // test if Max value is in accessible range
@@ -70,37 +69,37 @@ class DiscreteAxis
     DiscreteAxis& operator=(const DiscreteAxis&) = default;
     DiscreteAxis& operator=(DiscreteAxis&&) = default;
 
-    /// return the array location(array interval) for a given T value
-    int get_bin(const T value) const noexcept {
+    /// return the array location(array interval) for a given double value
+    int get_bin(const double value) const noexcept {
       return static_cast<int>((value - Min_) * Inv_Step_);
     };
 
     /// return iterator pointing to the bin of a given value
-    const_iterator iterator_at(const T value) const noexcept {
+    const_iterator iterator_at(const double value) const noexcept {
       return Array_.cbegin() + static_cast<int>((value - Min_) * Inv_Step_);
     }
 
     /* get functions in order to check ranges*/
     /// returns the lower bound of the first bin
-    T get_min() const noexcept {
+    double get_min() const noexcept {
       return Min_;
     };
 
     /// returns the upper bound of the last bin
-    T get_max() const noexcept {
+    double get_max() const noexcept {
       return Max_;
     };
 
-    T get_center_min() const noexcept{
+    double get_center_min() const noexcept{
       return Min_ + 0.5 * Step_;
     }
 
-    T get_center_max() const noexcept{
+    double get_center_max() const noexcept{
       return Max_ - 0.5 * Step_;
     }
 
     /// returns the bin width of every bin
-    T get_step() const noexcept {
+    double get_step() const noexcept {
       return Step_;
     };
 
@@ -110,42 +109,42 @@ class DiscreteAxis
     };
 
     /// return the center value of bin bin_
-    T get_value(const int bin) const noexcept {
+    double get_value(const int bin) const noexcept {
       return Min_ + Step_ * (bin + 0.5);
     };
 
     /// returns the entry for value value_
-    T get_entry(const T value) const noexcept {
+    double get_entry(const double value) const noexcept {
       return Array_[get_bin(value)];
     };
 
     /// add 1 to the corresponding bin
-    void add_one(const T energy) noexcept {
+    void add_one(const double energy) noexcept {
       this->Array_[get_bin(energy)] += 1.0;
     };
     
     /// reset histogram entries to zero;
     /// replace with std algorithm
-    void reset(const T value = 0.0) noexcept {
+    void reset(const double value = 0.0) noexcept {
       std::fill(Array_.begin(), Array_.end(), value);
     };
 
     /* access Array_ elements directly with the [] operator*/
     /// get Referennce to object in order to access const element
-    const T& operator [] (const int entry) const {
+    const double& operator [] (const int entry) const {
       return Array_[entry];
     }
     /// get Reference to object in order to read and write elements
-    T& operator [] (const int entry) {
+    double& operator [] (const int entry) {
       return Array_[entry];
     }
 
     /// returns pointer to internal data
-    T *data() noexcept {
+    double *data() noexcept {
       return Array_.data();
     };
     /// returns const pointer to internal data
-    const T* data() const noexcept {
+    const double* data() const noexcept {
       return Array_.data();
     };
 
@@ -165,8 +164,8 @@ class DiscreteAxis
     const_iterator cend() const { return Array_.cend(); }
 
     /// calculate number of bins
-    int calc_num_bins(const T Min, const T Step,
-                      const T Max) const;
+    int calc_num_bins(const double Min, const double Step,
+                      const double Max) const;
 
     /*-----------------------------------------------------------------------------
      *  comparision operator
@@ -186,8 +185,7 @@ class DiscreteAxis
     void load_formatted(const std::string& file);
 };
 
-template <class T>
-inline bool DiscreteAxis<T>::operator==(const DiscreteAxis<T>& rhs) const noexcept{
+inline bool DiscreteAxis::operator==(const DiscreteAxis& rhs) const noexcept{
   if (Min_ != rhs.Min_) {
     return false;
   }
@@ -206,21 +204,18 @@ inline bool DiscreteAxis<T>::operator==(const DiscreteAxis<T>& rhs) const noexce
   return true;
 }
 
-template <class T>
-inline bool DiscreteAxis<T>::operator!=(const DiscreteAxis& rhs) const noexcept{
+inline bool DiscreteAxis::operator!=(const DiscreteAxis& rhs) const noexcept {
   return !(*this == rhs);
 }
 
-template <class T>
-inline int DiscreteAxis<T>::calc_num_bins(const T Min, const T Step,
-                                          const T Max) const {
+inline int DiscreteAxis::calc_num_bins(const double Min, const double Step,
+                                       const double Max) const {
   assert(Min < Max);
-  T num = (Max-Min)/Step;
+  double num = (Max-Min)/Step;
   return num + 1;
 }
 
-template <class T>
-inline std::string DiscreteAxis<T>::formatted_string() const {
+inline std::string DiscreteAxis::formatted_string() const {
   std::stringstream ss;
   ss.precision(18);
   ss.setf(std::ios::scientific);
@@ -234,14 +229,12 @@ inline std::string DiscreteAxis<T>::formatted_string() const {
   return ss.str();
 }
 
-template <class T>
-inline void DiscreteAxis<T>::write_formatted(const std::string& filename) const {
+inline void DiscreteAxis::write_formatted(const std::string& filename) const {
   std::fstream out(filename, std::ios::out | std::ios::trunc);
   out << this->formatted_string();
 }
 
-template <class T>
-void  DiscreteAxis<T>::load_formatted(const std::string& filename)
+void  DiscreteAxis::load_formatted(const std::string& filename)
 {
   std::fstream file(filename, std::ios::in);
   std::string name;
@@ -280,10 +273,10 @@ void  DiscreteAxis<T>::load_formatted(const std::string& filename)
   file >> Num_Bins_;
   Array_.resize(Num_Bins_);
   size_t lines = 0;
-  T value_tmp_old = 0.0;
+  double value_tmp_old = 0.0;
   std::string line;
   while(std::getline(file, line)){
-    T value_tmp_new = 0.0, entry_tmp = 0.0;
+    double value_tmp_new = 0.0, entry_tmp = 0.0;
     // test if only valid chars are in the line
     if (line[0] != '#' and not line.empty()) {
       std::stringstream(line) >> value_tmp_new >> entry_tmp;
@@ -296,7 +289,7 @@ void  DiscreteAxis<T>::load_formatted(const std::string& filename)
       }
       Array_[lines] = entry_tmp;
       if (lines >= 1){
-        T Step_tmp = value_tmp_new - value_tmp_old;
+        double Step_tmp = value_tmp_new - value_tmp_old;
         if (std::fabs(Step_ - Step_tmp) > 1e-7) {
           std::cerr << "Error while load_formatted of DiscreteAxis " << filename
                     << "\n";
@@ -311,8 +304,7 @@ void  DiscreteAxis<T>::load_formatted(const std::string& filename)
   }
 }
 
-template <class T>
-inline void serialize(const DiscreteAxis<T>& t, std::ostream& out){
+inline void serialize(const DiscreteAxis& t, std::ostream& out){
     serialize(t.Min_, out);
     serialize(t.Step_, out);
     serialize(t.Inv_Step_, out);
@@ -321,8 +313,7 @@ inline void serialize(const DiscreteAxis<T>& t, std::ostream& out){
     serialize(t.Array_, out);
 }
 
-template <class T>
-inline void deserialize(DiscreteAxis<T>& t, std::istream& in){
+inline void deserialize(DiscreteAxis& t, std::istream& in){
     deserialize(t.Min_, in);
     deserialize(t.Step_, in);
     deserialize(t.Inv_Step_, in);
