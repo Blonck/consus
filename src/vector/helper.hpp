@@ -5,6 +5,10 @@
 
 #include "../definitions.hpp"
 
+namespace consus
+{
+  
+
 typedef std::vector<double> vec1d;
 typedef std::vector<std::vector<double>> vec2d;
 typedef std::vector<std::vector<std::vector<double>>> vec3d;
@@ -82,12 +86,12 @@ struct inner_type<vec2d>{
 };
 
 template <class T>
-std::ostream& operator<<(std::ostream& out, const std::vector<T>& data){
-  std::cout << "[ ";
+std::ostream& operator<<(std::ostream& out, const vec1<T>& data){
+  out << "[ ";
   for (auto &elem: data){
-    std::cout << elem << " ";
+    out << elem << " ";
   }
-  std::cout << "]";
+  out << "]";
   return out;
 }
 
@@ -103,21 +107,23 @@ std::string print_1d(const vec1<T>& vec){
 }
 
 template <class T>
-std::ostream& operator<<(std::ostream& out, const std::vector<std::vector<T>>& data){
-  std::cout << "[";
+std::ostream& operator<<(std::ostream& out, const vec2<T>& data){
+  out << "[";
   for (size_t i = 0; i < data.size(); ++i){
     if ( not (i == 0)){
-      std::cout << " ";
+      out << " ";
     }
-    std::cout << "[ ";
+    out << "[ ";
     for (size_t j = 0; j < data[i].size(); ++j){
-      std::cout << data[i][j] << " ";
+      out << data[i][j] << " ";
     }
-    std::cout << "]";
+    out << "]";
     if ( i != (data.size()-1)){
-      std::cout << "\n";
+      out << "\n";
     }
   }
-  std::cout << "]";
+  out << "]";
   return out;
 }
+
+} /* end of namespace consus */ 

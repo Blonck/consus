@@ -1,8 +1,8 @@
 #include <string>
 #include <iostream>
 #include <chrono>
-#include "../../src/load_file.hpp"
-#include "../../src/all_matching.hpp"
+#include "../../src/data/load_file.hpp"
+#include "../../src/data/all_matching.hpp"
 #include "../../src/vector/helper.hpp"
 #include "../../src/DiscreteAxis2D.hpp"
 #include "../../src/WHAM2D/WHAM2D.hpp"
@@ -49,13 +49,13 @@ int main(int argc, char const *argv[])
     Temperatures.push_back(Temp);
     Betas.push_back(1.0/Temp);
   }
-  vec1d results(Temperatures.size());
 
   std::cout << header << "\n";
 
 #pragma omp parallel for
   for (size_t column = 0; column < header.size(); ++column) {
     std::cout << "reweighting " << header[column] << "\n";
+    vec1d results(Temperatures.size());
     for (size_t j = 0; j < Betas.size(); ++j) {
       results[j] = reweight<NVT>(DOS, MicroMeans[column], {Betas[j], Kappa});
     }
@@ -71,15 +71,13 @@ int main(int argc, char const *argv[])
       std::cout << jk_paths << "\n";
       if (jk_paths.size() > 0) {
         for (size_t i = 0; i < num_bins; ++i) {
-          DiscreteAxis2D DOS;
-          std::vector<DiscreteAxis2D> MicroMeans;
-          std::vector<std::string> header;
-          dlib::deserialize(jk_paths[i] + "/logDOS.obj") >> DOS;
-          dlib::deserialize(jk_paths[i] + "/header.obj") >> header;
-          dlib::deserialize(jk_paths[i] + "/MicroMeans.obj") >> MicroMeans;
+          DiscreteAxis2D jk_DOS;
+          std::vector<DiscreteAxis2D> jk_MicroMeans;
+          dlib::deserialize(jk_paths[i] + "/logDOS.obj") >> jk_DOS;
+          dlib::deserialize(jk_paths[i] + "/MicroMeans.obj") >> jk_MicroMeans;
           for (size_t j = 0; j < Betas.size(); ++j) {
             results_jk[j][i] =
-                reweight<NVT>(DOS, MicroMeans[column], {Betas[j], Kappa});
+                reweight<NVT>(jk_DOS, jk_MicroMeans[column], {Betas[j], Kappa});
           }
         }
       }
@@ -100,10 +98,10 @@ int main(int argc, char const *argv[])
       }
     }
 
-    path = "results";
-    boost::filesystem::create_directories(path);
+    std::string pathr = "results";
+    boost::filesystem::create_directories(pathr);
 
-    std::string path_kappa = path + "/Kappa";
+    std::string path_kappa = pathr + "/Kappa";
     boost::filesystem::create_directories(path_kappa);
 
     auto replacediv = [](const std::string name) {

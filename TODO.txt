@@ -1,0 +1,2 @@
+TODO: using log library or something else instead of #define VERBOSE
+TODO: add some simple statistic calculation (jackknife error, binning etc)

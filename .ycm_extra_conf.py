@@ -37,7 +37,8 @@ import ycm_core
 flags = ['-Wall', '-Wextra', '-pedantic', '-Werror', '-fexceptions', '-std=c++1y', '-I',
          '/usr/include/openmpi', '-x', 'c++', '-I', '.', '-isystem', '/usr/include',
          '-isystem', '/usr/local/include', '-I', './src', '-I', './extern/Catch/single_include',
-         '-I', './extern/dlib', '-I', './extern/eigen', '-I', './extern/vectorclass'
+         '-I', './extern/dlib', '-I', './extern/eigen', '-I', './extern/vectorclass',
+         '-I', './extern/benchmark/include/benchmark'
 ]
 
 

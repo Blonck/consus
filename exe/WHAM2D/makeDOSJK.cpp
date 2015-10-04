@@ -1,9 +1,11 @@
+#define VERBOSE
+
 #include <string>
 #include <iostream>
 #include <chrono>
 #include <regex>
-#include "../../src/load_file.hpp"
-#include "../../src/all_matching.hpp"
+#include "../../src/data/load_file.hpp"
+#include "../../src/data/all_matching.hpp"
 #include "../../src/vector/helper.hpp"
 #include "../../src/DiscreteAxis2D.hpp"
 #include "../../src/WHAM2D/WHAM2D.hpp"
@@ -18,6 +20,7 @@ typedef std::chrono::high_resolution_clock myclock;
 
 int main(int argc, char const *argv[])
 {
+  std::cout << "jk calculation\n";
   if (argc < 3){
     std::cerr << "arguments are missing\n";
     std::exit(1);
@@ -28,28 +31,28 @@ int main(int argc, char const *argv[])
   const double devmax = std::stod(argv[1]);
   const int NumBins = std::stoi(argv[2]);
 
-
   Range rangeE1;
   Range rangeE2;
   std::vector<std::string> filenames;
   std::vector<std::string> header;
   std::vector<std::pair<double, double>> Parameters;
   std::vector<double> initial_lnZ;
-  DiscreteAxis2D initial_logDOS(rangeE1, rangeE2, log_zero<double>());
-  bool add_eig;
+  DiscreteAxis2D initial_logDOS;
+  std::cout << "read in old state\n";
 
   std::string path("analysis");
   std::string path_jk("analysis/JK");
-  dlib::serialize(path + "/rangeE1.obj") << rangeE1;
-  dlib::serialize(path + "/rangeE2.obj") << rangeE2;
-  dlib::serialize(path + "/filenames.obj") << filenames;
-  dlib::serialize(path + "/lnZ.obj") << initial_lnZ;
-  dlib::serialize(path + "/logDOS.obj") << initial_logDOS;
-  dlib::serialize(path + "/header.obj") << header;
-  dlib::serialize(path + "/Parameters.obj") << Parameters;
-  dlib::deserialize(path + "/add_eigenvalues.obj") >> add_eig;
+  dlib::deserialize(path + "/rangeE1.obj") >> rangeE1;
+  dlib::deserialize(path + "/rangeE2.obj") >> rangeE2;
+  dlib::deserialize(path + "/filenames.obj") >> filenames;
+  dlib::deserialize(path + "/lnZ.obj") >> initial_lnZ;
+  dlib::deserialize(path + "/logDOS.obj") >> initial_logDOS;
+  dlib::deserialize(path + "/header.obj") >> header;
+  dlib::deserialize(path + "/Parameters.obj") >> Parameters;
 
+  std::cout << "start jk calculation\n";
   for (int j = 0; j < NumBins; ++j) {
+    std::cout << j << "th jackknife bin\n";
     DiscreteAxis2D Hist;
     HistInfo2D HistInfo;
     std::vector<HistInfo2D> HistInfos;
@@ -58,24 +61,19 @@ int main(int argc, char const *argv[])
     std::vector<double> lnZ(initial_lnZ);
     DiscreteAxis2D logDOS(initial_logDOS);
     for (size_t i = 0; i < filenames.size(); ++i) {
-      std::cout << filenames[i] << "\n";
       std::cout << "load file\n";
+      std::cout << filenames[i] << "\n";
       auto timeseries = read_ssv_jk(filenames[i], j, NumBins);
-      if (add_eig) {
-        consus::eig::add_eigenvalues(timeseries, 5, 6, 7, 8, 9, 10);
-      }
       if (i == 0) {
-        std::tie(Hist, HistInfos, MicroMeans) =
+        std::tie(Hist, HistInfo) =
             make_histogram2d(timeseries, colE1, colE2, rangeE1, rangeE2);
-        HistInfo = HistInfos[0];
+        HistInfos.push_back(HistInfo);
       } else {
-        add_histogram2d(timeseries, colE1, colE2, Hist, HistInfo, HistInfos,
-                        MicroMeans);
+        add_histogram2d(timeseries, colE1, colE2, Hist, HistInfo, HistInfos);
       }
     }
 
-    normalize_MicroMeans(Hist, MicroMeans);
-    std::cout << "last full WHAM\n";
+    std::cout << "WHAM\n";
     calc_logDOS_full<NVT>(Hist, HistInfo, HistInfos, Parameters, devmax, 10,
                           lnZ, logDOS);
     std::string path("analysis/JK/" + std::to_string(j));

@@ -8,16 +8,22 @@ constexpr T log_zero() {
   return std::numeric_limits<T>::lowest();
 }
 
+// TODO: maybe use __builtin_expect since a > b in almost all cases
+// TODO: can be optimized if std::exp(x) = 0, return value don't need log1p(exp())
+//template <class T>
+//inline double addlogwise(T a, T b) noexcept {
+//  return (a > b) ? (a + std::log1p(std::exp(b - a)))
+//                 : (b + std::log1p(std::exp(a - b)));
+//}
+
 template <class T>
-inline double addlogwise(const T a, const T b) {
-  T log_max;
-  T log_abs;
-  if (a > b) {
-    log_max = a;
-    log_abs = b - a;
-  } else {
-    log_max = b;
-    log_abs = a - b;
+inline T addlogwise(T a, T b) noexcept {
+  if (a < b){
+    std::swap(a, b);
   }
-  return log_max + std::log1p(std::exp(log_abs));
+  if (b <= -1000.0){
+    return a;
+  }else{
+    return a + std::log1p(std::exp(b-a));
+  }
 }
