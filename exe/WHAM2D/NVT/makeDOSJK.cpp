@@ -57,7 +57,6 @@ int main(int argc, char const *argv[])
     HistInfo2D HistInfo;
     std::vector<HistInfo2D> HistInfos;
     vec1<double> length_Hists;
-    std::vector<DiscreteAxis2D> MicroMeans;
     std::vector<double> lnZ(initial_lnZ);
     DiscreteAxis2D logDOS(initial_logDOS);
     for (size_t i = 0; i < filenames.size(); ++i) {
@@ -81,8 +80,8 @@ int main(int argc, char const *argv[])
     dlib::serialize(path + "/Hist.obj") << Hist;
     dlib::serialize(path + "/lnZ.obj") << lnZ;
     dlib::serialize(path + "/logDOS.obj") << logDOS;
-    dlib::serialize(path + "/MicroMeans.obj") << MicroMeans;
     dlib::serialize(path + "/HistInfo.obj") << HistInfo;
     dlib::serialize(path + "/HistInfos.obj") << HistInfos;
   }
+  dlib::serialize(path + "/NumBins.obj") << NumBins;
 }

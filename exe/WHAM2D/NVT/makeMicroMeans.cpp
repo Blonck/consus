@@ -16,15 +16,9 @@
 using namespace consus;
 using namespace consus::WHAM2D;
 
-typedef std::chrono::high_resolution_clock myclock;
-
-int main(int argc, char const *argv[])
+int main()
 {
-  if (argc < 2){
-    std::cerr << "arguments are missing\n";
-    std::exit(1);
-  }
-  int NumBins = std::stod(argv[1]);
+  int NumBins;
   const int col1 = 0;
   const int col2 = 1;
 
@@ -40,6 +34,7 @@ int main(int argc, char const *argv[])
   dlib::deserialize(path + "/rangeE2.obj") >> rangeE2;
   dlib::deserialize(path + "/header.obj") >> header;
   dlib::deserialize(path + "/filenames.obj") >> filenames;
+  dlib::deserialize(path + "/NumBins.obj") >> NumBins;
 
   bool add_eig = false;
   if (header.size() > 10) {
@@ -114,7 +109,7 @@ int main(int argc, char const *argv[])
   dlib::serialize(path + "/MicroMeans.obj") << MicroMeans;
   for (int i = 0; i < NumBins; ++i) {
     DiscreteAxis2D jk_Hist;
-    dlib::deserialize(path_jk + "/" + std::to_string(i)) >> jk_Hist;
+    dlib::deserialize(path_jk + "/" + std::to_string(i) + "/Hist.obj") >> jk_Hist;
     for (size_t j = 0; j < jk_MicroMeans[i].size(); ++j) {
       for (int k = 0; k < jk_MicroMeans[i][j].size(); ++k) {
         jk_MicroMeans[i][j][k] /= std::exp(jk_Hist[k]);
