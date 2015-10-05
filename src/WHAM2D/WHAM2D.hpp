@@ -171,9 +171,9 @@ double estimate_lnZ_from_hist(const DiscreteAxis2D& Hist,
                          const std::pair<double, double>& Parameter_Target) {
   auto log_Z_ratio = log_zero<double>();
   //TODO: maybe pragma with log_Z_ratio shared
-  for (int i = HistInfo.ffi_first; i < HistInfo.lfi_first; ++i) {
+  for (int i = HistInfo.ffi_first; i <= HistInfo.lfi_first; ++i) {
     auto E1 = Hist.get_value_first(i);
-    for (int j = HistInfo.ffi_second; j < HistInfo.lfi_second; ++j) {
+    for (int j = HistInfo.ffi_second; j <= HistInfo.lfi_second; ++j) {
       auto E2 = Hist.get_value_second(j);
       auto index = Hist.get_index(i, j);
       if (Hist[index] != log_zero<double>()) {
@@ -208,9 +208,9 @@ template <class TEnsemble>
 double calc_lnZ(const DiscreteAxis2D& DOS, const HistInfo2D& HistInfo,
                  const std::pair<double, double>& Parameter) {
   double lnZ = log_zero<double>();
-    for (int i = HistInfo.ffi_first; i < HistInfo.lfi_first; ++i) {
+    for (int i = HistInfo.ffi_first; i <= HistInfo.lfi_first; ++i) {
       auto E1 = DOS.get_value_first(i);
-      for (int j = HistInfo.ffi_second; j < HistInfo.lfi_second; ++j) {
+      for (int j = HistInfo.ffi_second; j <= HistInfo.lfi_second; ++j) {
         auto E2 = DOS.get_value_second(j);
         int index = DOS.get_index(i, j);
         lnZ = addlogwise(
@@ -228,9 +228,9 @@ vec1<double> calc_lnZ(const DiscreteAxis2D& DOS, const HistInfo2D& HistInfo,
   vec1<double> lnZ(Parameters.size(), log_zero<double>());
 #pragma omp parallel for
   for (size_t k = 0; k < Parameters.size(); ++k) {
-    for (int i = HistInfo.ffi_first; i < HistInfo.lfi_first; ++i) {
+    for (int i = HistInfo.ffi_first; i <= HistInfo.lfi_first; ++i) {
       auto E1 = DOS.get_value_first(i);
-      for (int j = HistInfo.ffi_second; j < HistInfo.lfi_second; ++j) {
+      for (int j = HistInfo.ffi_second; j <= HistInfo.lfi_second; ++j) {
         auto E2 = DOS.get_value_second(j);
         int index = DOS.get_index(i, j);
         lnZ[k] = addlogwise(lnZ[k], DOS[index] + TEnsemble::log_weight(
@@ -280,9 +280,9 @@ vec1<double> calc_lnZ_reduced(const DiscreteAxis2D& DOS,
 #pragma omp parallel for schedule(dynamic)
   for (size_t k = 0; k < Parameters.size()-1; ++k) {
     if (Overlap[k] >= treshold) {
-      for (int i = HistInfos[k].ffi_first; i < HistInfos[k].lfi_first; ++i) {
+      for (int i = HistInfos[k].ffi_first; i <= HistInfos[k].lfi_first; ++i) {
         auto E1 = DOS.get_value_first(i);
-        for (int j = HistInfos[k].ffi_second; j < HistInfos[k].lfi_second;
+        for (int j = HistInfos[k].ffi_second; j <= HistInfos[k].lfi_second;
              ++j) {
           auto E2 = DOS.get_value_second(j);
           int index = DOS.get_index(i, j);
@@ -297,9 +297,9 @@ vec1<double> calc_lnZ_reduced(const DiscreteAxis2D& DOS,
     }
   }
   size_t k = Overlap.size();
-  for (int i = HistInfos[k].ffi_first; i < HistInfos[k].lfi_first; ++i) {
+  for (int i = HistInfos[k].ffi_first; i <= HistInfos[k].lfi_first; ++i) {
     auto E1 = DOS.get_value_first(i);
-    for (int j = HistInfos[k].ffi_second; j < HistInfos[k].lfi_second; ++j) {
+    for (int j = HistInfos[k].ffi_second; j <= HistInfos[k].lfi_second; ++j) {
       auto E2 = DOS.get_value_second(j);
       int index = DOS.get_index(i, j);
       lnZ[k] = addlogwise(
@@ -331,9 +331,9 @@ void iterate_logDOS(const DiscreteAxis2D& Histogram, const HistInfo2D& HistInfo,
                     const vec1<std::pair<double, double>>& Parameters,
                     const vec1<double>& lnZ, DiscreteAxis2D& logDOS) {
 #pragma omp parallel for
-  for (auto i = HistInfo.ffi_first; i < HistInfo.lfi_first; ++i) {
+  for (auto i = HistInfo.ffi_first; i <= HistInfo.lfi_first; ++i) {
     auto E1 = logDOS.get_value_first(i);
-    for (auto j = HistInfo.ffi_second; j < HistInfo.lfi_second; ++j) {
+    for (auto j = HistInfo.ffi_second; j <= HistInfo.lfi_second; ++j) {
       auto E2 = logDOS.get_value_second(j);
       auto index = logDOS.get_index(i, j);
       auto tmp = log_zero<double>();
