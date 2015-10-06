@@ -98,7 +98,7 @@ int main(int argc, char const *argv[])
   }
 
   std::cout << "last full WHAM" << "\n";
-  calc_logDOS_full<NVT>(Hist, HistInfo, HistInfos, Parameters, devmax, 3, lnZ,
+  calc_logDOS_full<NVT>(Hist, HistInfo, HistInfos, Parameters, devmax, 10, lnZ,
                         logDOS);
 
   dlib::serialize(path + "/Hist.obj") << Hist;

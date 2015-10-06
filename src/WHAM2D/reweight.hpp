@@ -16,6 +16,42 @@ namespace WHAM2D
 {
 
 template <class TEnsemble>
+double reweight_E(const DiscreteAxis2D& DOS,
+                  const std::pair<double, double>& Parameter) {
+double lnZ = log_zero<double>();
+  double tmp = log_zero<double>();
+  for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
+    const auto E1 = DOS.get_value_first(i);
+    for (int j = 0; j < DOS.get_num_bins_second(); ++j) {
+      const auto E2 = DOS.get_value_second(j);
+      const int index = DOS.get_index(i, j);
+      if (std::isfinite(DOS[index])) {
+        lnZ = addlogwise(
+            lnZ, DOS[index] + TEnsemble::log_weight(Parameter.first, E1,
+                                                    Parameter.second, E2));
+      }
+    }
+  }
+
+  for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
+    const auto E1 = DOS.get_value_first(i);
+    for (int j = 0; j < DOS.get_num_bins_second(); ++j) {
+      const auto E2 = DOS.get_value_second(j);
+      const int index = DOS.get_index(i, j);
+      if (std::isfinite(DOS[index])) {
+        tmp = addlogwise(tmp, DOS[index] +
+                                  TEnsemble::ham(E1, Parameter.second, E2) +
+                                  TEnsemble::log_weight(Parameter.first, E1,
+                                                        Parameter.second, E2) -
+                                  lnZ);
+      }
+    }
+  }
+  return std::exp(tmp);
+
+}
+
+template <class TEnsemble>
 double reweight(const DiscreteAxis2D& DOS, const DiscreteAxis2D& MicroMean,
                 const std::pair<double, double>& Parameter) {
   double min = std::numeric_limits<double>::max();

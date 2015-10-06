@@ -1,5 +1,8 @@
 include_directories(.)
 
+add_executable (reweightE reweightE.cpp)
+target_link_libraries(reweightE ${Boost_LIBRARIES})
+
 add_executable (NVT2D_makeDOS makeDOS.cpp)
 target_link_libraries(NVT2D_makeDOS ${Boost_LIBRARIES})
 
@@ -23,9 +26,6 @@ target_link_libraries(NVT2D_reweightdT_constK ${Boost_LIBRARIES})
 
 add_executable (NVT2D_reweightdT2_constK reweightdT2_constK.cpp)
 target_link_libraries(NVT2D_reweightdT2_constK ${Boost_LIBRARIES})
-
-add_executable (NVT2D_logWeights logWeights.cpp)
-target_link_libraries(NVT2D_logWeights ${Boost_LIBRARIES})
 
 add_executable (NVT2D_reweight_contour reweight_contour.cpp)
 target_link_libraries(NVT2D_reweight_contour ${Boost_LIBRARIES})

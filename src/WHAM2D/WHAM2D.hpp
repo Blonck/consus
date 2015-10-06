@@ -18,21 +18,21 @@ namespace consus
 namespace WHAM2D
 {
 
-namespace detail {
-
-// checks if two rectangles (in the filled entries in histogram) overlaps
-inline bool overlaps(const HistInfo2D& h1, const HistInfo2D& h2) {
-  if ((h1.ffi_first >= h2.ffi_first and h1.ffi_first <= h2.lfi_first) or
-      (h1.lfi_first >= h2.ffi_first and h1.lfi_first <= h2.lfi_first)) {
-    if ((h1.ffi_second >= h2.ffi_second and h1.ffi_second <= h2.lfi_second) or
-        (h1.lfi_second >= h2.ffi_second and h1.lfi_second <= h2.lfi_second)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-} /* end of namespace detail */
+//namespace detail {
+//
+//// checks if two rectangles (in the filled entries in histogram) overlaps
+//inline bool overlaps(const HistInfo2D& h1, const HistInfo2D& h2) {
+//  if ((h1.ffi_first >= h2.ffi_first and h1.ffi_first <= h2.lfi_first) or
+//      (h1.lfi_first >= h2.ffi_first and h1.lfi_first <= h2.lfi_first)) {
+//    if ((h1.ffi_second >= h2.ffi_second and h1.ffi_second <= h2.lfi_second) or
+//        (h1.lfi_second >= h2.ffi_second and h1.lfi_second <= h2.lfi_second)) {
+//      return true;
+//    }
+//  }
+//  return false;
+//}
+//
+//} /* end of namespace detail */
 
 #pragma omp declare reduction( +: DiscreteAxis2D : \
     std::transform(omp_in.begin(), omp_in.end(),   \
@@ -64,13 +64,13 @@ make_histogram2d(const vec2<double>& Timeseries, int col1, int col2,
     Histogram[index] += 1.0;
   }
   //#pragma omp parallel for
-  for (int i = 0; i < Histogram.size(); ++i){
-    if (Histogram[i] != 0.0){
-      Histogram[i] = std::log(Histogram[i]);
-    }else{
-      Histogram[i] = log_zero<double>();
-    }
-  }
+  //for (int i = 0; i < Histogram.size(); ++i){
+  //  if (Histogram[i] != 0.0){
+  //    Histogram[i] = std::log(Histogram[i]);
+  //  }else{
+  //    Histogram[i] = log_zero<double>();
+  //  }
+  //}
   double log_length = std::log(Timeseries[col1].size());
   HistInfo2D HistInfo(log_length, ffi_first, lfi_first, ffi_second,
                           lfi_second);
@@ -97,11 +97,12 @@ void merge_histograms2d(DiscreteAxis2D& fullHist, HistInfo2D& fullHistInfo,
   fullHistInfo.log_length =
       addlogwise(fullHistInfo.log_length, tmpHistInfo.log_length);
 
-  #pragma omp parallel for
+  //#pragma omp parallel for
   for (int i = 0; i < tmpHist.size(); ++i){
-    if (tmpHist[i] != log_zero<double>()){
-      fullHist[i] = addlogwise(fullHist[i], tmpHist[i]);
-    }
+    //if (tmpHist[i] != log_zero<double>()){
+    //  fullHist[i] = addlogwise(fullHist[i], tmpHist[i]);
+    //}
+    fullHist[i] += tmpHist[i];
   }
 }
 
@@ -130,18 +131,14 @@ DiscreteAxis2D add_histogram2d(const vec2<double>& Timeseries, int col1,
     tmpHist[index] += 1.0;
   }
 
-  #pragma omp parallel for
+  //#pragma omp parallel for
   for (int i = 0; i < tmpHist.size(); ++i){
-    if (tmpHist[i] != 0){
-      tmpHist[i] = std::log(tmpHist[i]);
-      Histogram[i] = addlogwise(Histogram[i],tmpHist[i]);
-    }
+    //if (tmpHist[i] != 0){
+    //  tmpHist[i] = std::log(tmpHist[i]);
+    //  Histogram[i] = addlogwise(Histogram[i],tmpHist[i]);
+    //}
+    Histogram[i] += tmpHist[i];
   }
-#ifdef VERBOSE
-  std::cout << "old Range [" << HistInfo.ffi_first << ", "
-            << HistInfo.lfi_first << "] [" << HistInfo.ffi_second << ", "
-            << HistInfo.lfi_second << "]\n";
-#endif
   HistInfo.ffi_first = std::min(ffi_first, HistInfo.ffi_first);
   HistInfo.lfi_first = std::max(lfi_first, HistInfo.lfi_first);
   HistInfo.ffi_second = std::min(ffi_second, HistInfo.ffi_second);
@@ -150,10 +147,6 @@ DiscreteAxis2D add_histogram2d(const vec2<double>& Timeseries, int col1,
       addlogwise(HistInfo.log_length, std::log(Timeseries[col1].size()));
   HistInfos.push_back({std::log(Timeseries[col1].size()), ffi_first, lfi_first,
                        ffi_second, lfi_second});
-#ifdef VERBOSE
-  std::cout << "add Range [" << ffi_first << ", " << lfi_first << "] ["
-            << ffi_second << ", " << lfi_second << "]\n";
-#endif
   return tmpHist;
 }
 
@@ -198,7 +191,7 @@ void normalize_lnZ(vec1<double>& lnZ){
 
 void normalize_logDOS(DiscreteAxis2D& logDOS, const vec1<double>& lnZ) {
   assert(lnZ.size() > 0);
-#pragma omp parallel for
+  #pragma omp parallel for
   for (int i = 0; i < logDOS.size(); ++i) {
     logDOS[i] -= lnZ[0];
   }
@@ -208,9 +201,9 @@ template <class TEnsemble>
 double calc_lnZ(const DiscreteAxis2D& DOS, const HistInfo2D& HistInfo,
                  const std::pair<double, double>& Parameter) {
   double lnZ = log_zero<double>();
-    for (int i = HistInfo.ffi_first; i <= HistInfo.lfi_first; ++i) {
+    for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
       auto E1 = DOS.get_value_first(i);
-      for (int j = HistInfo.ffi_second; j <= HistInfo.lfi_second; ++j) {
+      for (int j = 0; j < DOS.get_num_bins_second(); ++j) {
         auto E2 = DOS.get_value_second(j);
         int index = DOS.get_index(i, j);
         lnZ = addlogwise(
@@ -226,11 +219,11 @@ template <class TEnsemble>
 vec1<double> calc_lnZ(const DiscreteAxis2D& DOS, const HistInfo2D& HistInfo,
                       const vec1<std::pair<double, double>>& Parameters) {
   vec1<double> lnZ(Parameters.size(), log_zero<double>());
-#pragma omp parallel for
+  #pragma omp parallel for
   for (size_t k = 0; k < Parameters.size(); ++k) {
-    for (int i = HistInfo.ffi_first; i <= HistInfo.lfi_first; ++i) {
+    for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
       auto E1 = DOS.get_value_first(i);
-      for (int j = HistInfo.ffi_second; j <= HistInfo.lfi_second; ++j) {
+      for (int j = 0; j < DOS.get_num_bins_second(); ++j) {
         auto E2 = DOS.get_value_second(j);
         int index = DOS.get_index(i, j);
         lnZ[k] = addlogwise(lnZ[k], DOS[index] + TEnsemble::log_weight(
@@ -249,7 +242,7 @@ vec1<double> calc_lnZ_reduced(
     const vec1<std::pair<double, double>>& Parameters) {
   vec1<double> lnZ(Parameters.size(), log_zero<double>());
   assert(Parameters.size() == HistInfos.size());
-#pragma omp parallel for
+  #pragma omp parallel for
   for (size_t k = 0; k < Parameters.size(); ++k) {
     for (int i = HistInfos[k].ffi_first; i < HistInfos[k].lfi_first; ++i) {
       auto E1 = DOS.get_value_first(i);
@@ -277,7 +270,7 @@ vec1<double> calc_lnZ_reduced(const DiscreteAxis2D& DOS,
   assert(Overlap.size() > 0);
   assert(Parameters.size() == HistInfos.size());
   assert(Parameters.size()-1 == Overlap.size());
-#pragma omp parallel for schedule(dynamic)
+  #pragma omp parallel for schedule(dynamic)
   for (size_t k = 0; k < Parameters.size()-1; ++k) {
     if (Overlap[k] >= treshold) {
       for (int i = HistInfos[k].ffi_first; i <= HistInfos[k].lfi_first; ++i) {
@@ -330,7 +323,7 @@ void iterate_logDOS(const DiscreteAxis2D& Histogram, const HistInfo2D& HistInfo,
                     const vec1<HistInfo2D>& HistInfos,
                     const vec1<std::pair<double, double>>& Parameters,
                     const vec1<double>& lnZ, DiscreteAxis2D& logDOS) {
-#pragma omp parallel for
+  #pragma omp parallel for
   for (auto i = HistInfo.ffi_first; i <= HistInfo.lfi_first; ++i) {
     auto E1 = logDOS.get_value_first(i);
     for (auto j = HistInfo.ffi_second; j <= HistInfo.lfi_second; ++j) {
@@ -344,7 +337,11 @@ void iterate_logDOS(const DiscreteAxis2D& Histogram, const HistInfo2D& HistInfo,
                                                    Parameters[k].second, E2) -
                              lnZ[k]);
       }
-      logDOS[index] = Histogram[index] - tmp;
+      if (Histogram[index] != 0){
+        logDOS[index] = std::log(Histogram[index]) - tmp;
+      }else{
+        logDOS[index] = log_zero<double>() - tmp;
+      }
     }
   }
 }

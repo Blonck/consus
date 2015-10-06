@@ -65,34 +65,32 @@ int main(int argc, char const *argv[])
     size_t num_bins = jk_paths.size();
     vec2d results_jk(Temperatures.size(), vec1d(num_bins, 0));
     std::cout << jk_paths << "\n";
-    for (size_t i = 0; i < num_bins; ++i) {
-      DiscreteAxis2D jk_DOS;
-      std::vector<DiscreteAxis2D> jk_MicroMeans;
-      dlib::deserialize(jk_paths[i] + "/logDOS.obj") >> jk_DOS;
-      dlib::deserialize(jk_paths[i] + "/MicroMeans.obj") >> jk_MicroMeans;
-      #pragma omp parallel for
-      for (size_t j = 0; j < Betas.size(); ++j) {
-        results_jk[j][i] =
-            reweight_dT<NVT>(jk_DOS, jk_MicroMeans[column], {Betas[j], Kappa});
-      }
-    }
+    //for (size_t i = 0; i < num_bins; ++i) {
+    //  DiscreteAxis2D jk_DOS;
+    //  std::vector<DiscreteAxis2D> jk_MicroMeans;
+    //  dlib::deserialize(jk_paths[i] + "/logDOS.obj") >> jk_DOS;
+    //  dlib::deserialize(jk_paths[i] + "/MicroMeans.obj") >> jk_MicroMeans;
+    //  #pragma omp parallel for
+    //  for (size_t j = 0; j < Betas.size(); ++j) {
+    //    results_jk[j][i] =
+    //        reweight_dT<NVT>(jk_DOS, jk_MicroMeans[column], {Betas[j], Kappa});
+    //  }
+    //}
 
-    for (size_t i = 0; i < results_jk.size(); ++i) {
-      for (size_t j = 0; j < results_jk[i].size(); ++j) {
-        jk_means[i] += results_jk[i][j];
-        jk_error[i] += results_jk[i][j] * results_jk[i][j];
-      }
-    }
-    for (size_t i = 0; i < jk_means.size(); ++i) {
-      jk_means[i] = jk_means[i] / static_cast<double>(num_bins);
-      jk_error[i] -=
-          static_cast<double>(num_bins) * jk_means[i] * jk_means[i];
-      jk_error[i] *=
-          static_cast<double>(num_bins - 1) / static_cast<double>(num_bins);
-      jk_error[i] = std::sqrt(jk_error[i]);
-    }
-    std::cout << jk_means << "\n";
-    std::cout << jk_error << "\n";
+    //for (size_t i = 0; i < results_jk.size(); ++i) {
+    //  for (size_t j = 0; j < results_jk[i].size(); ++j) {
+    //    jk_means[i] += results_jk[i][j];
+    //    jk_error[i] += results_jk[i][j] * results_jk[i][j];
+    //  }
+    //}
+    //for (size_t i = 0; i < jk_means.size(); ++i) {
+    //  jk_means[i] = jk_means[i] / static_cast<double>(num_bins);
+    //  jk_error[i] -=
+    //      static_cast<double>(num_bins) * jk_means[i] * jk_means[i];
+    //  jk_error[i] *=
+    //      static_cast<double>(num_bins - 1) / static_cast<double>(num_bins);
+    //  jk_error[i] = std::sqrt(jk_error[i]);
+    //}
 
     std::string pathr = "results";
     boost::filesystem::create_directories(pathr);
@@ -119,7 +117,8 @@ int main(int argc, char const *argv[])
     out << "#Temperature " << header[column] << "_dT "
         << "error(" << header[column] << "_dT)\n";
     for (size_t j = 0; j < Temperatures.size(); ++j) {
-      out << Temperatures[j] << " " << results[j] << " " << jk_error[j] << "\n";
+      //out << Temperatures[j] << " " << results[j] << " " << jk_error[j] << "\n";
+      out << Temperatures[j] << " " << results[j] << "\n";
     }
     out.close();
   }

@@ -34,8 +34,6 @@ int main(int argc, char const *argv[])
   for (int i = 3; i < argc; ++i){
     filenames.push_back(argv[i]);
   }
-  std::vector<std::string> header = read_header(filenames[0]);
-  std::cout << header << "\n";
 
   std::regex param_regex(".*timeseries/(.*)/PT_T(.*).dat", std::regex::egrep);
   std::smatch match;
@@ -92,9 +90,9 @@ int main(int argc, char const *argv[])
   double minE2 = std::numeric_limits<double>::max();
   double maxE2 = std::numeric_limits<double>::lowest();
 
+  std::cout << "searchin min/max values in data\n";
   #pragma omp parallel for reduction(min:minE1, minE2) reduction(max:maxE1, maxE2)
   for (size_t i = 0; i < filenames.size(); ++i) {
-    std::cout << filenames[i] << "\n";
     auto timeseries = read_ssv(filenames[i]);
     auto resE1 =
         std::minmax_element(timeseries[colE1].begin(), timeseries[colE1].end());
@@ -111,12 +109,6 @@ int main(int argc, char const *argv[])
   vec1<double> length_Hists;
   Range rangeE1 = {minE1, stepE1, maxE1};
   Range rangeE2 = {minE2, stepE2, maxE2};
-  {
-    DiscreteAxis2D Hist(rangeE1, rangeE2, 0.0);
-    std::cout << "Need at least this amount of memory:\n";
-    std::cout << (Hist.size()+1) * sizeof(DiscreteAxis2D) << " bytes\n";
-    std::cout << "plus size of one datafile\n";
-  }
   
   std::string path("analysis");
   std::string pathh("analysis/Hists");
@@ -124,13 +116,17 @@ int main(int argc, char const *argv[])
   boost::filesystem::create_directories(pathh);
 
   for (size_t i = 0; i < filenames.size(); ++i) {
+    std::regex_search(filenames[i], match, param_regex);
+    Parameters.push_back(
+        std::make_pair(1.0 / std::stod(match[2]), std::stod(match[1])));
+  }
+
+  #pragma omp parallel for
+  for (size_t i = 0; i < filenames.size(); ++i) {
       DiscreteAxis2D Hist;
       HistInfo2D HistInfo;
-      std::regex_search(filenames[i], match, param_regex);
-      Parameters.push_back(
-          std::make_pair(1.0 / std::stod(match[2]), std::stod(match[1])));
-      std::cout << "load file\n";
-      std::cout << filenames[i] << "\n";
+      #pragma omp critical
+      std::cout << "load file " << filenames[i] << "\n";
       auto timeseries = read_ssv(filenames[i]);
       std::tie(Hist, HistInfo) =
           make_histogram2d(timeseries, colE1, colE2, rangeE1, rangeE2);
@@ -145,12 +141,12 @@ int main(int argc, char const *argv[])
   std::cout << "RangeE2 " << rangeE2 << "\n";
 
   for (size_t i = 0; i < Parameters.size(); ++i){
-    dlib::serialize(pathh + "/Parameter_" + std::to_string(i) + ".obj") << Parameters[i];
+    dlib::serialize(pathh + "/Parameter_" + std::to_string(i) + ".obj")
+        << Parameters[i];
   }
 
   dlib::serialize(path + "/rangeE1.obj") << rangeE1;
   dlib::serialize(path + "/rangeE2.obj") << rangeE2;
   dlib::serialize(path + "/filenames.obj") << filenames;
-  dlib::serialize(path + "/header.obj") << header;
   dlib::serialize(path + "/Parameters.obj") << Parameters;
 }

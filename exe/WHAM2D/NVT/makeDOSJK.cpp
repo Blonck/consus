@@ -51,6 +51,7 @@ int main(int argc, char const *argv[])
   dlib::deserialize(path + "/Parameters.obj") >> Parameters;
 
   std::cout << "start jk calculation\n";
+#pragma omp parallel for
   for (int j = 0; j < NumBins; ++j) {
     std::cout << j << "th jackknife bin\n";
     DiscreteAxis2D Hist;
@@ -60,8 +61,7 @@ int main(int argc, char const *argv[])
     std::vector<double> lnZ(initial_lnZ);
     DiscreteAxis2D logDOS(initial_logDOS);
     for (size_t i = 0; i < filenames.size(); ++i) {
-      std::cout << "load file\n";
-      std::cout << filenames[i] << "\n";
+      std::cout << "load file " << filenames[i] << "\n";
       auto timeseries = read_ssv_jk(filenames[i], j, NumBins);
       if (i == 0) {
         std::tie(Hist, HistInfo) =
