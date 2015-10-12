@@ -11,6 +11,8 @@
 #include "../../src/WHAM2D/WHAM2D.hpp"
 #include "../../src/eigenvalues/add_eigenvalues.hpp"
 
+
+#include "boost/progress.hpp"
 #include "boost/filesystem.hpp"
 
 using namespace consus;
@@ -30,11 +32,10 @@ int main()
 
   size_t NH = filenames.size();
   std::cout << "calculating overlap\n";
-  std::cout << NH << "\n";
 
+  boost::progress_display progress((NH*(NH+1))/2);
   #pragma omp parallel for
   for (size_t i = 0; i < NH; ++i){
-    std::cout << "Overlap for " << i << "th histogram\n";
     vec1<int> Overlap(i);
     DiscreteAxis2D H1;
     dlib::deserialize(pathh + "/Hist_"  + std::to_string(i) + ".obj") >> H1;
@@ -47,6 +48,8 @@ int main()
           ++Overlap[j];
         }
       }
+      #pragma omp critical 
+      ++progress;
     }
     assert(Overlap.size() == i);
     dlib::serialize(pathh + "/Overlap_" + std::to_string(i) + ".obj") << Overlap;

@@ -8,6 +8,7 @@ namespace consus
 namespace WHAM2D
 {
 
+/// simple class containing some information about DiscreteAxis2D objects
 struct HistInfo2D{
   /// logarithm of sum of all entries
   double log_length;
@@ -20,6 +21,7 @@ struct HistInfo2D{
   /// last filled index for second dimension
   int lfi_second = std::numeric_limits<int>::lowest();
 
+  /// empty ctor
   HistInfo2D(){}
   HistInfo2D(double log_length_, int ffi_first_, int lfi_first_,
              int ffi_second_, int lfi_second_)

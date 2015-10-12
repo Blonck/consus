@@ -12,6 +12,7 @@
 #include "../../src/eigenvalues/add_eigenvalues.hpp"
 
 #include "boost/filesystem.hpp"
+#include "boost/progress.hpp"
 
 using namespace consus;
 using namespace consus::WHAM2D;
@@ -34,7 +35,6 @@ int main(int argc, char const *argv[])
   Range rangeE1;
   Range rangeE2;
   std::vector<std::string> filenames;
-  std::vector<std::string> header;
   std::vector<std::pair<double, double>> Parameters;
   std::vector<double> initial_lnZ;
   DiscreteAxis2D initial_logDOS;
@@ -47,41 +47,46 @@ int main(int argc, char const *argv[])
   dlib::deserialize(path + "/filenames.obj") >> filenames;
   dlib::deserialize(path + "/lnZ.obj") >> initial_lnZ;
   dlib::deserialize(path + "/logDOS.obj") >> initial_logDOS;
-  dlib::deserialize(path + "/header.obj") >> header;
   dlib::deserialize(path + "/Parameters.obj") >> Parameters;
 
-  std::cout << "start jk calculation\n";
-#pragma omp parallel for
-  for (int j = 0; j < NumBins; ++j) {
-    std::cout << j << "th jackknife bin\n";
-    DiscreteAxis2D Hist;
-    HistInfo2D HistInfo;
-    std::vector<HistInfo2D> HistInfos;
-    vec1<double> length_Hists;
-    std::vector<double> lnZ(initial_lnZ);
-    DiscreteAxis2D logDOS(initial_logDOS);
-    for (size_t i = 0; i < filenames.size(); ++i) {
-      std::cout << "load file " << filenames[i] << "\n";
-      auto timeseries = read_ssv_jk(filenames[i], j, NumBins);
+  vec1<DiscreteAxis2D> jk_Hist(NumBins);
+  vec1<HistInfo2D> jk_HistInfo(NumBins);
+  vec2<HistInfo2D> jk_HistInfos(NumBins, vec1<HistInfo2D>(filenames.size()));
+  vec1<vec1<double>> jk_length_Hists(NumBins);
+  vec1<std::vector<double>> jk_lnZ(NumBins, initial_lnZ);
+  vec1<DiscreteAxis2D> jk_logDOS(NumBins, initial_logDOS);
+
+  boost::progress_display progress(filenames.size());
+  for (size_t i = 0; i < filenames.size(); ++i) {
+    ++progress;
+    auto timeseries = read_ssv(filenames[i]);
+    #pragma omp parallel for
+    for (int j = 0; j < NumBins; ++j) {
+      DiscreteAxis2D Hist;
+      HistInfo2D HistInfo;
+      std::tie(Hist, HistInfo) = make_histogram2d_jk(
+          timeseries, colE1, colE2, rangeE1, rangeE2, j, NumBins);
+      jk_HistInfos[j][i] = HistInfo;
       if (i == 0) {
-        std::tie(Hist, HistInfo) =
-            make_histogram2d(timeseries, colE1, colE2, rangeE1, rangeE2);
-        HistInfos.push_back(HistInfo);
+        jk_Hist[j] = Hist;
+        jk_HistInfo[j] = HistInfo;
       } else {
-        add_histogram2d(timeseries, colE1, colE2, Hist, HistInfo, HistInfos);
+        merge_histograms2d(jk_Hist[j], jk_HistInfo[j], Hist, HistInfo );
       }
     }
+  }
 
-    std::cout << "WHAM\n";
-    calc_logDOS_full<NVT>(Hist, HistInfo, HistInfos, Parameters, devmax, 10,
-                          lnZ, logDOS);
+  boost::progress_display progress2(NumBins);
+  #pragma omp parallel for
+  for (int j = 0; j < NumBins; ++j) {
+    ++progress2;
+    calc_logDOS_full<NVT>(jk_Hist[j], jk_HistInfo[j], jk_HistInfos[j],
+                          Parameters, devmax, 3, jk_lnZ[j], jk_logDOS[j]);
     std::string path("analysis/JK/" + std::to_string(j));
     boost::filesystem::create_directories(path);
-    dlib::serialize(path + "/Hist.obj") << Hist;
-    dlib::serialize(path + "/lnZ.obj") << lnZ;
-    dlib::serialize(path + "/logDOS.obj") << logDOS;
-    dlib::serialize(path + "/HistInfo.obj") << HistInfo;
-    dlib::serialize(path + "/HistInfos.obj") << HistInfos;
+    dlib::serialize(path + "/Hist.obj") << jk_Hist[j];
+    dlib::serialize(path + "/lnZ.obj") << jk_lnZ[j];
+    dlib::serialize(path + "/logDOS.obj") << jk_logDOS[j];
   }
   dlib::serialize(path + "/NumBins.obj") << NumBins;
 }

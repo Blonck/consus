@@ -206,23 +206,27 @@ template <class TEnsemble>
 vec1<double> reweight_dT(const DiscreteAxis2D& DOS,
                          const DiscreteAxis2D& MicroMean,
                          const vec1<std::pair<double, double>>& Parameters) {
+  auto red_params = Parameters;
+  typedef std::pair<double, double> TP;
+  std::sort(red_params.begin(), red_params.end(),
+            [](const TP& a, const TP& b) { return a.second < b.second; });
+  red_params.erase(std::unique(red_params.begin(), red_params.end()),
+                   red_params.end());
   double min = std::numeric_limits<double>::max();
   double minE = std::numeric_limits<double>::max();
   double minOE = std::numeric_limits<double>::max();
   // TODO: for min no reduction is necessary, could be calculated at k == 0
   #pragma omp parallel for reduction(min : min, minE, minOE)
-  for (size_t k = 0; k < Parameters.size(); ++k) {
-    for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
-      const double E1 = DOS.get_value_first(i);
-      for (int j = 0; j < DOS.get_num_bins_second(); ++j) {
-        const int index = DOS.get_index(i, j);
-        if (std::isfinite(MicroMean[index])) {
-          const double E2 = DOS.get_value_second(j);
-          const double E = TEnsemble::ham(E1, Parameters[k].second, E2);
-          min = std::min(min, MicroMean[index]);
-          minE = std::min(minE, E);
-          minOE = std::min(minOE, MicroMean[index] * E);
-        }
+  for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
+    const double E1 = DOS.get_value_first(i);
+    for (int j = 0; j < DOS.get_num_bins_second(); ++j) {
+      const double E2 = DOS.get_value_second(j);
+      const int index = DOS.get_index(i, j);
+      min = std::min(min, MicroMean[index]);
+      for (size_t k = 0; k < red_params.size(); ++k) {
+        const double E = TEnsemble::ham(E1, Parameters[k].second, E2);
+        minE = std::min(minE, E);
+        minOE = std::min(minOE, MicroMean[index] * E);
       }
     }
   }

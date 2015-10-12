@@ -205,7 +205,7 @@ std::vector<std::vector<T>> read_ssv_jk(const std::string& filename,
   size_t length_bins = v.size() / num_bins;
   if (v.size() % num_bins != 0) {
     std::cerr << "bin size and time series size doesn't fit\n";
-    std::abort();
+    std::exit(1);
   }
   v_jk.reserve(v.size()-length_bins);
   for (size_t k = 0; k < num_bin; ++k) {

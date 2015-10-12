@@ -31,7 +31,7 @@ public:
   std::vector<double> Array_;
 
 public:
-  /// constructor
+  /// empty ctor
   DiscreteAxis2D();
   DiscreteAxis2D(const double Min_First, const double Max_First,
                  const double Step_First, const double Min_Second,
@@ -61,6 +61,9 @@ public:
   int get_bin(const double value_first, const double value_second) const
       noexcept;
 
+  /// see above
+  int get_bin(const std::pair<double, double> &value) const noexcept;
+
   int get_bin_first(const double value) const noexcept {
     assert(value >= Min_First_);
     assert(value <= Max_First_ + Step_First_);
@@ -73,8 +76,6 @@ public:
     return static_cast<int>((value - Min_Second_) * Inv_Step_Second_);
   }
 
-  /// see above
-  int get_bin(const std::pair<double, double> &value) const noexcept;
 
   inline int get_index(const int index_first, const int index_second) const
       noexcept {

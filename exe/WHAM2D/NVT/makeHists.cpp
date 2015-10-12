@@ -12,6 +12,7 @@
 #include "../../src/eigenvalues/add_eigenvalues.hpp"
 
 #include "boost/filesystem.hpp"
+#include "boost/progress.hpp"
 
 using namespace consus;
 using namespace consus::WHAM2D;
@@ -91,8 +92,11 @@ int main(int argc, char const *argv[])
   double maxE2 = std::numeric_limits<double>::lowest();
 
   std::cout << "searchin min/max values in data\n";
+  boost::progress_display progress(filenames.size());
   #pragma omp parallel for reduction(min:minE1, minE2) reduction(max:maxE1, maxE2)
   for (size_t i = 0; i < filenames.size(); ++i) {
+    #pragma omp critical
+    ++progress;
     auto timeseries = read_ssv(filenames[i]);
     auto resE1 =
         std::minmax_element(timeseries[colE1].begin(), timeseries[colE1].end());
@@ -121,12 +125,15 @@ int main(int argc, char const *argv[])
         std::make_pair(1.0 / std::stod(match[2]), std::stod(match[1])));
   }
 
+  
+  std::cout << "loading files\n";
+  boost::progress_display progress2(filenames.size());
   #pragma omp parallel for
   for (size_t i = 0; i < filenames.size(); ++i) {
       DiscreteAxis2D Hist;
       HistInfo2D HistInfo;
       #pragma omp critical
-      std::cout << "load file " << filenames[i] << "\n";
+      ++progress2;
       auto timeseries = read_ssv(filenames[i]);
       std::tie(Hist, HistInfo) =
           make_histogram2d(timeseries, colE1, colE2, rangeE1, rangeE2);

@@ -12,6 +12,7 @@
 #include "../../src/eigenvalues/add_eigenvalues.hpp"
 
 #include "boost/filesystem.hpp"
+#include "boost/progress.hpp"
 
 using namespace consus;
 using namespace consus::WHAM2D;
@@ -54,8 +55,10 @@ int main()
   vec2<DiscreteAxis2D> jk_MicroMeans(
       NumBins,
       vec1<DiscreteAxis2D>(header.size(), DiscreteAxis2D(rangeE1, rangeE2)));
+  
+  boost::progress_display progress(filenames.size());
   for (size_t i = 0; i < filenames.size(); ++i) {
-    std::cout << filenames[i] << "\n";
+    ++progress;
     auto timeseries = read_ssv(filenames[i]);
     int length_bins = timeseries[0].size() / NumBins;
     if (timeseries[0].size() % NumBins != 0) {
@@ -65,7 +68,7 @@ int main()
     if (add_eig){
       consus::eig::add_eigenvalues(timeseries, 5, 6, 7, 8, 9, 10);
     }
-    for (size_t j = 0; j < timeseries.size(); ++j) {
+    for (size_t j = 0; j < timeseries[col1].size(); ++j) {
       const double E1 = timeseries[col1][j];
       const double E2 = timeseries[col2][j];
       int index = MicroMeans[0].get_bin(E1, E2);
@@ -73,33 +76,31 @@ int main()
         MicroMeans[k][index] += timeseries[k][j];
       }
     }
-    //std::cout << "collecting jackknife blocks\n";
-    //for (int j = 0; j < NumBins; ++j) {
-    //  std::cout << j << " ";
-    //  for (int k = 0; k < j; ++k) {
-    //    for (int l = 0; l < length_bins; ++l) {
-    //      int i_ts = k * length_bins + l;
-    //      const double E1 = timeseries[col1][i_ts];
-    //      const double E2 = timeseries[col2][i_ts];
-    //      int index = MicroMeans[0].get_bin(E1, E2);
-    //      for (size_t h = 0; h < header.size(); ++h) {
-    //        jk_MicroMeans[j][h][index] += timeseries[h][i_ts];
-    //      }
-    //    }
-    //  }
-    //  for (int k = j + 1; k < NumBins; ++k) {
-    //    for (int l = 0; l < length_bins; ++l) {
-    //      int i_ts = k * length_bins + l;
-    //      const double E1 = timeseries[col1][i_ts];
-    //      const double E2 = timeseries[col2][i_ts];
-    //      int index = MicroMeans[0].get_bin(E1, E2);
-    //      for (size_t h = 0; h < header.size(); ++h) {
-    //        jk_MicroMeans[j][h][index] += timeseries[h][i_ts];
-    //      }
-    //    }
-    //  }
-    //}
-    //std::cout << "\n";
+    #pragma omp parallel for
+    for (int j = 0; j < NumBins; ++j) {
+      for (int k = 0; k < j; ++k) {
+        for (int l = 0; l < length_bins; ++l) {
+          int i_ts = k * length_bins + l;
+          const double E1 = timeseries[col1][i_ts];
+          const double E2 = timeseries[col2][i_ts];
+          int index = MicroMeans[0].get_bin(E1, E2);
+          for (size_t h = 0; h < header.size(); ++h) {
+            jk_MicroMeans[j][h][index] += timeseries[h][i_ts];
+          }
+        }
+      }
+      for (int k = j + 1; k < NumBins; ++k) {
+        for (int l = 0; l < length_bins; ++l) {
+          int i_ts = k * length_bins + l;
+          const double E1 = timeseries[col1][i_ts];
+          const double E2 = timeseries[col2][i_ts];
+          int index = MicroMeans[0].get_bin(E1, E2);
+          for (size_t h = 0; h < header.size(); ++h) {
+            jk_MicroMeans[j][h][index] += timeseries[h][i_ts];
+          }
+        }
+      }
+    }
   }
 
   std::cout << "normalize\n";
@@ -111,20 +112,19 @@ int main()
     }
   }
   dlib::serialize(path + "/MicroMeans.obj") << MicroMeans;
-  //for (int i = 0; i < NumBins; ++i) {
-  //  DiscreteAxis2D jk_Hist;
-  //  dlib::deserialize(path_jk + "/" + std::to_string(i) + "/Hist.obj") >> jk_Hist;
-  //  for (size_t j = 0; j < jk_MicroMeans[i].size(); ++j) {
-  //    for (int k = 0; k < jk_MicroMeans[i][j].size(); ++k) {
-  //    double norm = std::exp(Hist[k]);
-  //      if (norm > 0){
-  //        jk_MicroMeans[i][j][k] /= norm;
-  //      }
-  //    }
-  //  }
-  //  dlib::serialize(path_jk + "/" + std::to_string(i) + "/MicroMeans.obj")
-  //      << jk_MicroMeans[i];
-  //}
+  for (int i = 0; i < NumBins; ++i) {
+    DiscreteAxis2D jk_Hist;
+    dlib::deserialize(path_jk + "/" + std::to_string(i) + "/Hist.obj") >> jk_Hist;
+    for (size_t j = 0; j < jk_MicroMeans[i].size(); ++j) {
+      for (int k = 0; k < jk_MicroMeans[i][j].size(); ++k) {
+        if (Hist[k] != 0.0) {
+          jk_MicroMeans[i][j][k] /= jk_Hist[k];
+        }
+      }
+    }
+    dlib::serialize(path_jk + "/" + std::to_string(i) + "/MicroMeans.obj")
+        << jk_MicroMeans[i];
+  }
 
   dlib::serialize(path + "/header.obj") << header;
   dlib::serialize(path + "/add_eigenvalues.obj") << add_eig;

@@ -11,6 +11,8 @@
 #include "../vector/helper.hpp"
 #include "../addlogwise.hpp"
 
+#include "dlib/time_this.h"
+
 namespace consus
 {
 
@@ -18,28 +20,20 @@ namespace consus
 namespace WHAM2D
 {
 
-//namespace detail {
-//
-//// checks if two rectangles (in the filled entries in histogram) overlaps
-//inline bool overlaps(const HistInfo2D& h1, const HistInfo2D& h2) {
-//  if ((h1.ffi_first >= h2.ffi_first and h1.ffi_first <= h2.lfi_first) or
-//      (h1.lfi_first >= h2.ffi_first and h1.lfi_first <= h2.lfi_first)) {
-//    if ((h1.ffi_second >= h2.ffi_second and h1.ffi_second <= h2.lfi_second) or
-//        (h1.lfi_second >= h2.ffi_second and h1.lfi_second <= h2.lfi_second)) {
-//      return true;
-//    }
-//  }
-//  return false;
-//}
-//
-//} /* end of namespace detail */
-
 #pragma omp declare reduction( +: DiscreteAxis2D : \
     std::transform(omp_in.begin(), omp_in.end(),   \
       omp_out.begin(), omp_out.begin(),            \
       std::plus<double>()) )                       \
       initializer (omp_priv(omp_orig))
 
+/// constructs a 2D histogram and the corresponding HistInfo2D object
+///
+/// \param Timeseries - vector of vectors (2dim vector)
+///                     each vector contains a single time series 
+/// \param col1 - column of the first energy term of the Hamiltonian E1
+/// \param col2 - column of the second energy term of the Hamiltonian E2
+/// \param range1 - range for discretizing E1
+/// \param range2 - range for discretizing E2
 std::tuple<DiscreteAxis2D, HistInfo2D>
 make_histogram2d(const vec2<double>& Timeseries, int col1, int col2,
                  const Range& range1, const Range& range2) {
@@ -77,8 +71,82 @@ make_histogram2d(const vec2<double>& Timeseries, int col1, int col2,
   return std::make_tuple(Histogram, HistInfo);
 }
 
+/// constructs  2D histogram and the corresponding HistInfo2D object 
+/// from a the jackknifed time series
+///
+/// \param Timeseries - vector of vectors (2dim vector)
+///                     each vector contains a single time series 
+/// \param col1 column of the first energy term of the Hamiltonian E1
+/// \param col2 column of the second energy term of the Hamiltonian E2
+/// \param range1 range for discretizing E1
+/// \param range2 range for discretizing E2
+/// \param num_bin number of the constructed jackknifed histogram
+/// \param num_bins total number of used jackknife blocks
+/// \return a tuple with two elements, the first is the histogram and the second the
+///         HistInfo2D object of the histogram
+std::tuple<DiscreteAxis2D, HistInfo2D> make_histogram2d_jk(
+    const vec2<double>& Timeseries, int col1, int col2, const Range& range1,
+    const Range& range2, const size_t num_bin, const size_t num_bins) {
+  size_t length_bins = Timeseries[0].size() / num_bins;
+  DiscreteAxis2D Histogram(range1, range2, 0.0);
+  vec1<HistInfo2D> HistInfos;
+  int ffi_first = std::numeric_limits<int>::max();
+  int lfi_first = std::numeric_limits<int>::lowest();
+  int ffi_second = std::numeric_limits<int>::max();
+  int lfi_second = std::numeric_limits<int>::lowest();
+  //TODO: test reduction before use it
+  //#pragma omp parallel for reduction(+: Histogram)
+  //                         reduction(min: ffi_first, ffi_second)
+  //                         reduction(max: lfi_first, lfi_second)
+  for (size_t i = 0; i < num_bin; ++i) {
+    for (size_t j = 0; j < length_bins; ++j) {
+      size_t i_ts = i * length_bins + j;
+      const double E1 = Timeseries[col1][i_ts];
+      const double E2 = Timeseries[col2][i_ts];
+      ffi_first = std::min(ffi_first, Histogram.get_bin_first(E1));
+      lfi_first = std::max(lfi_first, Histogram.get_bin_first(E1));
+      ffi_second = std::min(ffi_second, Histogram.get_bin_second(E2));
+      lfi_second = std::max(lfi_second, Histogram.get_bin_second(E2));
+      int index = Histogram.get_bin(E1, E2);
+      Histogram[index] += 1.0;
+    }
+  }
+  for (size_t i = num_bin+1; i < num_bins; ++i) {
+    for (size_t j = 0; j < length_bins; ++j) {
+      size_t i_ts = i * length_bins + j;
+      const double E1 = Timeseries[col1][i_ts];
+      const double E2 = Timeseries[col2][i_ts];
+      ffi_first = std::min(ffi_first, Histogram.get_bin_first(E1));
+      lfi_first = std::max(lfi_first, Histogram.get_bin_first(E1));
+      ffi_second = std::min(ffi_second, Histogram.get_bin_second(E2));
+      lfi_second = std::max(lfi_second, Histogram.get_bin_second(E2));
+      int index = Histogram.get_bin(E1, E2);
+      Histogram[index] += 1.0;
+    }
+  }
+  //#pragma omp parallel for
+  //for (int i = 0; i < Histogram.size(); ++i){
+  //  if (Histogram[i] != 0.0){
+  //    Histogram[i] = std::log(Histogram[i]);
+  //  }else{
+  //    Histogram[i] = log_zero<double>();
+  //  }
+  //}
+  double log_length = std::log(Timeseries[col1].size()-length_bins);
+  HistInfo2D HistInfo(log_length, ffi_first, lfi_first, ffi_second,
+                          lfi_second);
+  return std::make_tuple(Histogram, HistInfo);
+}
+
+/// merge two 2d histogram and its corresponding HistInfo2D object
+///
+/// \param fullHist will contain the data of the second histogram plus its own
+/// \param fullHistInfo will contain the merged information of both histograms
+/// \param tmpHist will be merged into fullHist
+/// \param tmpHistInfo will be merged into fullHistInfo
 void merge_histograms2d(DiscreteAxis2D& fullHist, HistInfo2D& fullHistInfo,
-                      const DiscreteAxis2D& tmpHist, const HistInfo2D& tmpHistInfo){
+                        const DiscreteAxis2D& tmpHist,
+                        const HistInfo2D& tmpHistInfo) {
   assert(fullHist.size() == tmpHist.size());
   assert(fullHist.get_min_first() == tmpHist.get_min_first());
   assert(fullHist.get_min_second() == tmpHist.get_min_second());
@@ -182,6 +250,9 @@ double estimate_lnZ_from_hist(const DiscreteAxis2D& Hist,
   return log_Z_ratio;
 }
 
+/// normalize lnZ
+///
+/// \param lnZ contains log(Z) for each parameter
 void normalize_lnZ(vec1<double>& lnZ){
   for (size_t i = 1; i < lnZ.size(); ++i) {
     lnZ[i] -= lnZ[0];
@@ -198,7 +269,7 @@ void normalize_logDOS(DiscreteAxis2D& logDOS, const vec1<double>& lnZ) {
 }
 
 template <class TEnsemble>
-double calc_lnZ(const DiscreteAxis2D& DOS, const HistInfo2D& HistInfo,
+double calc_lnZ(const DiscreteAxis2D& DOS,
                  const std::pair<double, double>& Parameter) {
   double lnZ = log_zero<double>();
     for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
@@ -216,7 +287,7 @@ double calc_lnZ(const DiscreteAxis2D& DOS, const HistInfo2D& HistInfo,
 
 /// TODO: use HistInfos for each parameter instead of whole area from HistInfo
 template <class TEnsemble>
-vec1<double> calc_lnZ(const DiscreteAxis2D& DOS, const HistInfo2D& HistInfo,
+vec1<double> calc_lnZ(const DiscreteAxis2D& DOS,
                       const vec1<std::pair<double, double>>& Parameters) {
   vec1<double> lnZ(Parameters.size(), log_zero<double>());
   #pragma omp parallel for
@@ -329,8 +400,11 @@ void iterate_logDOS(const DiscreteAxis2D& Histogram, const HistInfo2D& HistInfo,
     for (auto j = HistInfo.ffi_second; j <= HistInfo.lfi_second; ++j) {
       auto E2 = logDOS.get_value_second(j);
       auto index = logDOS.get_index(i, j);
-      auto tmp = log_zero<double>();
-      for (size_t k = 0; k < lnZ.size(); ++k) {
+      auto tmp = HistInfos[0].log_length +
+                 TEnsemble::log_weight(Parameters[0].first, E1,
+                                       Parameters[0].second, E2) -
+                 lnZ[0];
+      for (size_t k = 1; k < lnZ.size(); ++k) {
         tmp = addlogwise(tmp,
                          HistInfos[k].log_length +
                              TEnsemble::log_weight(Parameters[k].first, E1,
@@ -361,17 +435,18 @@ void calc_logDOS_full(const DiscreteAxis2D& Histogram,
   double dev;
   int count = 1;
   for (int i = 0; i < min_iteration; ++i){
-    iterate_logDOS<TEnsemble>(Histogram, HistInfo, HistInfos,  Parameters, lnZ, logDOS);
-    auto new_lnZ = calc_lnZ<TEnsemble>(logDOS, HistInfo, Parameters);
+    iterate_logDOS<TEnsemble>(Histogram, HistInfo, HistInfos, Parameters, lnZ,
+                              logDOS);
+    auto new_lnZ = calc_lnZ<TEnsemble>(logDOS, Parameters);
     dev = deviation(lnZ, new_lnZ);
     std::swap(lnZ, new_lnZ);
     std::cout << count << ": " << dev << " " << devmax << " - full, forced\n";
     ++count;
   }
   while(dev > devmax){
-    iterate_logDOS<TEnsemble>(Histogram, HistInfo, HistInfos, Parameters, lnZ,
-                              logDOS);
-    auto new_lnZ = calc_lnZ<TEnsemble>(logDOS, HistInfo, Parameters);
+    iterate_logDOS<TEnsemble>(Histogram, HistInfo, HistInfos,
+                                        Parameters, lnZ, logDOS);
+    auto new_lnZ = calc_lnZ<TEnsemble>(logDOS, Parameters);
     dev = deviation(lnZ, new_lnZ);
     lnZ.swap(new_lnZ);
     std::cout << count << ": "<< dev << " " << devmax << " - full\n";
@@ -419,10 +494,6 @@ void calc_logDOS_reduced(const DiscreteAxis2D& Histogram,
                                                Overlap, treshold, lnZ);
     dev = deviation(lnZ, new_lnZ);
     std::cout << count << ": " << dev << " " << devmax << " - reduced, overlap\n";
-    //if (not std::isfinite(dev)){
-    //  std::cout << "lnZ " << lnZ << "\n";
-    //  std::cout << "new lnZ " << new_lnZ << "\n";
-    //}
     lnZ.swap(new_lnZ);
     ++count;
   } while(dev > devmax);
@@ -432,55 +503,55 @@ void calc_logDOS_reduced(const DiscreteAxis2D& Histogram,
 /// call with first timeseries
 ///
 /// returns in this order:
-void logDOS_iteration_start(const vec2<double>& Timeseries, const int col1,
-                            const int col2, const Range& range1,
-                            const Range& range2, DiscreteAxis2D& Hist,
-                            HistInfo2D& HistInfo,
-                            vec1<HistInfo2D>& HistInfos, vec1<double>& lnZ) {
-  assert(lnZ.size() == 1);
-  std::tie(Hist, HistInfo) =
-      make_histogram2d(Timeseries, col1, col2, range1, range2);
-  assert(HistInfos.size() == 1);
-  HistInfos.push_back(HistInfo);
-}
-
-template <class TEnsemble>
-void logDOS_iteration_second(const vec2<double>& Timeseries, const int col1,
-                             const int col2,
-                             const vec1<std::pair<double, double>>& Parameters,
-                             const double devmax, DiscreteAxis2D& Hist,
-                             HistInfo2D& HistInfo,
-                             vec1<HistInfo2D>& HistInfos, vec1<double>& lnZ,
-                             DiscreteAxis2D& logDOS) {
-  assert(Parameters.size() == 2);
-  assert(lnZ.size() == 1);
-  assert(HistInfos.size() == 1);
-  lnZ.push_back(lnZ[0] + estimate_lnZ_from_hist<TEnsemble>(Hist, HistInfo, Parameters[0],
-                                                Parameters[1]));
-  add_histogram2d(Timeseries, col1, col2, Hist, HistInfo, HistInfos);
-  assert(lnZ.size() == 2);
-  assert(HistInfos.size() == 2);
-  calc_logDOS_reduced<TEnsemble>(Hist, HistInfo, HistInfos, Parameters, devmax,
-                                 lnZ, logDOS);
-}
-
-template <class TEnsemble>
-void logDOS_iteration_next(const vec2<double>& Timeseries, const int col1,
-                           const int col2, const double devmax,
-                           const vec1<std::pair<double, double>>& Parameters,
-                           DiscreteAxis2D& Hist,
-                           HistInfo2D& HistInfo, vec1<HistInfo2D>& HistInfos,
-                           vec1<double>& lnZ, DiscreteAxis2D& logDOS) {
-  assert(Parameters.size() == lnZ.size() + 1);
-  assert(lnZ.size() > 1);
-  assert(HistInfos.size() > 1);
-  lnZ.push_back(calc_lnZ<TEnsemble>(logDOS, HistInfo, Parameters.back()));
-  add_histogram2d(Timeseries, col1, col2, Hist, HistInfo, HistInfos);
-  assert(lnZ.size() > 2);
-  assert(HistInfos.size() > 2);
-  calc_logDOS_reduced<TEnsemble>(Hist, HistInfo, HistInfos, Parameters, devmax,
-                                 lnZ, logDOS);
-}
+//void logDOS_iteration_start(const vec2<double>& Timeseries, const int col1,
+//                            const int col2, const Range& range1,
+//                            const Range& range2, DiscreteAxis2D& Hist,
+//                            HistInfo2D& HistInfo,
+//                            vec1<HistInfo2D>& HistInfos, vec1<double>& lnZ) {
+//  assert(lnZ.size() == 1);
+//  std::tie(Hist, HistInfo) =
+//      make_histogram2d(Timeseries, col1, col2, range1, range2);
+//  assert(HistInfos.size() == 1);
+//  HistInfos.push_back(HistInfo);
+//}
+//
+//template <class TEnsemble>
+//void logDOS_iteration_second(const vec2<double>& Timeseries, const int col1,
+//                             const int col2,
+//                             const vec1<std::pair<double, double>>& Parameters,
+//                             const double devmax, DiscreteAxis2D& Hist,
+//                             HistInfo2D& HistInfo,
+//                             vec1<HistInfo2D>& HistInfos, vec1<double>& lnZ,
+//                             DiscreteAxis2D& logDOS) {
+//  assert(Parameters.size() == 2);
+//  assert(lnZ.size() == 1);
+//  assert(HistInfos.size() == 1);
+//  lnZ.push_back(lnZ[0] + estimate_lnZ_from_hist<TEnsemble>(Hist, HistInfo, Parameters[0],
+//                                                Parameters[1]));
+//  add_histogram2d(Timeseries, col1, col2, Hist, HistInfo, HistInfos);
+//  assert(lnZ.size() == 2);
+//  assert(HistInfos.size() == 2);
+//  calc_logDOS_reduced<TEnsemble>(Hist, HistInfo, HistInfos, Parameters, devmax,
+//                                 lnZ, logDOS);
+//}
+//
+//template <class TEnsemble>
+//void logDOS_iteration_next(const vec2<double>& Timeseries, const int col1,
+//                           const int col2, const double devmax,
+//                           const vec1<std::pair<double, double>>& Parameters,
+//                           DiscreteAxis2D& Hist,
+//                           HistInfo2D& HistInfo, vec1<HistInfo2D>& HistInfos,
+//                           vec1<double>& lnZ, DiscreteAxis2D& logDOS) {
+//  assert(Parameters.size() == lnZ.size() + 1);
+//  assert(lnZ.size() > 1);
+//  assert(HistInfos.size() > 1);
+//  lnZ.push_back(calc_lnZ<TEnsemble>(logDOS, HistInfo, Parameters.back()));
+//  add_histogram2d(Timeseries, col1, col2, Hist, HistInfo, HistInfos);
+//  assert(lnZ.size() > 2);
+//  assert(HistInfos.size() > 2);
+//  calc_logDOS_reduced<TEnsemble>(Hist, HistInfo, HistInfos, Parameters, devmax,
+//                                 lnZ, logDOS);
+//}
 
 //
 //vec1d reweight_dT2(const DiscreteAxis2D& DOS, const DiscreteAxis2D& MicroMean,

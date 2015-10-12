@@ -59,9 +59,10 @@ int main(int argc, char const *argv[])
         >> Parameter;
     HistInfos.push_back(tmpHistInfo);
     Parameters.push_back(Parameter);
-    std::cout << "===========================\n";
-    std::cout << "Temperature " << 1.0/Parameter.first << " Kappa " << Parameter.second << "\n";
-    std::cout << "===========================\n";
+    std::cout << "==================================================\n";
+    std::cout << "Temperature " << 1.0 / Parameter.first << " Kappa "
+              << Parameter.second << "\n";
+    std::cout << "==================================================\n";
     if (i == 0) {
       HistInfo = tmpHistInfo;
       Hist = tmpHist;
@@ -74,15 +75,15 @@ int main(int argc, char const *argv[])
       merge_histograms2d(Hist, HistInfo, tmpHist, tmpHistInfo);
       lnZ.push_back(lnZ[0] + estimate_lnZ_from_hist<NVT>(
                                  Hist, HistInfo, Parameters[0], Parameters[1]));
-      calc_logDOS_full<NVT>(Hist, HistInfo, HistInfos, Parameters, devmax, 3,
-                            lnZ, logDOS);
+      calc_logDOS_reduced<NVT>(Hist, HistInfo, HistInfos, Parameters, devmax,
+                               Overlap, 1, lnZ, logDOS);
       continue;
     }
     assert(Parameters.size() == lnZ.size() + 1);
     assert(lnZ.size() > 1);
     assert(HistInfos.size() > 1);
     merge_histograms2d(Hist, HistInfo, tmpHist, tmpHistInfo);
-    lnZ.push_back(calc_lnZ<NVT>(logDOS, HistInfo, Parameters.back()));
+    lnZ.push_back(calc_lnZ<NVT>(logDOS, Parameters.back()));
     assert(lnZ.size() > 2);
     assert(HistInfos.size() > 2);
     calc_logDOS_reduced<NVT>(Hist, HistInfo, HistInfos, Parameters, devmax,
