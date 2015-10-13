@@ -34,7 +34,7 @@ int main()
   std::cout << "calculating overlap\n";
 
   boost::progress_display progress((NH*(NH+1))/2);
-  #pragma omp parallel for
+  #pragma omp parallel for schedule(dynamic)
   for (size_t i = 0; i < NH; ++i){
     vec1<int> Overlap(i);
     DiscreteAxis2D H1;

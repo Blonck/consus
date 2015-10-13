@@ -270,11 +270,28 @@ void normalize_logDOS(DiscreteAxis2D& logDOS, const vec1<double>& lnZ) {
 
 template <class TEnsemble>
 double calc_lnZ(const DiscreteAxis2D& DOS,
-                 const std::pair<double, double>& Parameter) {
+                const std::pair<double, double>& Parameter) {
   double lnZ = log_zero<double>();
     for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
       auto E1 = DOS.get_value_first(i);
       for (int j = 0; j < DOS.get_num_bins_second(); ++j) {
+        auto E2 = DOS.get_value_second(j);
+        int index = DOS.get_index(i, j);
+        lnZ = addlogwise(
+            lnZ, DOS[index] + TEnsemble::log_weight(Parameter.first, E1,
+                                                    Parameter.second, E2));
+      }
+    }
+  return lnZ;
+}
+
+template <class TEnsemble>
+double calc_lnZ_reduced(const DiscreteAxis2D& DOS, const HistInfo2D& HistInfo,
+                        const std::pair<double, double>& Parameter) {
+  double lnZ = log_zero<double>();
+    for (int i = HistInfo.ffi_first; i < HistInfo.lfi_first; ++i) {
+      auto E1 = DOS.get_value_first(i);
+      for (int j = HistInfo.ffi_second; j < HistInfo.lfi_second; ++j) {
         auto E2 = DOS.get_value_second(j);
         int index = DOS.get_index(i, j);
         lnZ = addlogwise(

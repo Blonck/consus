@@ -42,7 +42,7 @@ int main(int argc, char const *argv[])
 
   const double TempStart = std::stod(argv[2]);
   const double TempEnd = std::stod(argv[3]);
-  const double TempStep = std::stod(argv[4]);
+  const int    NumTemp = std::stoi(argv[4]);
   const double KappaStart = std::stod(argv[5]);
   const double KappaEnd = std::stod(argv[6]);
   const double KappaStep = std::stod(argv[7]);
@@ -52,22 +52,22 @@ int main(int argc, char const *argv[])
 
   vec1d Temperatures;
   vec1<std::pair<double, double>> Parameters;
-  size_t NumTemps = 0;
   size_t NumKappas = 0;
 
+  double logMin = std::log(TempStart);
+  double logMax = std::log(TempEnd);
+  double factor = exp((logMax - logMin) / NumTemp);
   for (double Kappa = KappaStart; Kappa <= KappaEnd; Kappa += KappaStep) {
     ++NumKappas;
-    for (double Temp = TempStart; Temp <= TempEnd; Temp += TempStep) {
-      if (Kappa == KappaStart){
-        ++NumTemps;
-      }
+    Temperatures.push_back(TempStart);
+    Parameters.push_back({1.0 / TempStart, Kappa});
+    for (int i = 1; i < NumTemp; ++i) {
+      double Temp = Temperatures.back() * factor;
       Temperatures.push_back(Temp);
       Parameters.push_back({1.0 / Temp, Kappa});
     }
   }
   vec1d results(Parameters.size(), 0);
-
-  std::cout << header << "\n";
 
   results = reweight_dT<NVT>(DOS, MicroMeans[column], Parameters);
 
@@ -101,7 +101,7 @@ int main(int argc, char const *argv[])
   for (size_t k = 0; k < Parameters.size(); ++k) {
     out << Parameters[k].second << " " << Temperatures[k] << " " << results[k]
         << "\n";
-    if ((k % NumTemps) == (NumTemps - 1)) {
+    if ((k % NumTemp) == (NumTemp - 1)) {
       out << "\n";
     }
   }
