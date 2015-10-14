@@ -83,7 +83,7 @@ int main(int argc, char const *argv[])
     assert(lnZ.size() > 1);
     assert(HistInfos.size() > 1);
     merge_histograms2d(Hist, HistInfo, tmpHist, tmpHistInfo);
-    lnZ.push_back(calc_lnZ<NVT>(logDOS, Parameters.back()));
+    lnZ.push_back(calc_lnZ_reduced<NVT>(logDOS, tmpHistInfo, Parameters.back()));
     assert(lnZ.size() > 2);
     assert(HistInfos.size() > 2);
     calc_logDOS_reduced<NVT>(Hist, HistInfo, HistInfos, Parameters, devmax,

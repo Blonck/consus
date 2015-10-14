@@ -16,42 +16,6 @@ namespace WHAM2D
 {
 
 template <class TEnsemble>
-double reweight_E(const DiscreteAxis2D& DOS,
-                  const std::pair<double, double>& Parameter) {
-double lnZ = log_zero<double>();
-  double tmp = log_zero<double>();
-  for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
-    const auto E1 = DOS.get_value_first(i);
-    for (int j = 0; j < DOS.get_num_bins_second(); ++j) {
-      const auto E2 = DOS.get_value_second(j);
-      const int index = DOS.get_index(i, j);
-      if (std::isfinite(DOS[index])) {
-        lnZ = addlogwise(
-            lnZ, DOS[index] + TEnsemble::log_weight(Parameter.first, E1,
-                                                    Parameter.second, E2));
-      }
-    }
-  }
-
-  for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
-    const auto E1 = DOS.get_value_first(i);
-    for (int j = 0; j < DOS.get_num_bins_second(); ++j) {
-      const auto E2 = DOS.get_value_second(j);
-      const int index = DOS.get_index(i, j);
-      if (std::isfinite(DOS[index])) {
-        tmp = addlogwise(tmp, DOS[index] +
-                                  TEnsemble::ham(E1, Parameter.second, E2) +
-                                  TEnsemble::log_weight(Parameter.first, E1,
-                                                        Parameter.second, E2) -
-                                  lnZ);
-      }
-    }
-  }
-  return std::exp(tmp);
-
-}
-
-template <class TEnsemble>
 double reweight(const DiscreteAxis2D& DOS, const DiscreteAxis2D& MicroMean,
                 const std::pair<double, double>& Parameter) {
   double min = std::numeric_limits<double>::max();
@@ -222,11 +186,13 @@ vec1<double> reweight_dT(const DiscreteAxis2D& DOS,
     for (int j = 0; j < DOS.get_num_bins_second(); ++j) {
       const double E2 = DOS.get_value_second(j);
       const int index = DOS.get_index(i, j);
-      min = std::min(min, MicroMean[index]);
-      for (size_t k = 0; k < red_params.size(); ++k) {
-        const double E = TEnsemble::ham(E1, Parameters[k].second, E2);
-        minE = std::min(minE, E);
-        minOE = std::min(minOE, MicroMean[index] * E);
+      if (std::isfinite(MicroMean[index])) {
+        min = std::min(min, MicroMean[index]);
+        for (size_t k = 0; k < red_params.size(); ++k) {
+          const double E = TEnsemble::ham(E1, red_params[k].second, E2);
+          minE = std::min(minE, E);
+          minOE = std::min(minOE, MicroMean[index] * E);
+        }
       }
     }
   }
@@ -355,6 +321,100 @@ double reweight_dT2(const DiscreteAxis2D& DOS, const DiscreteAxis2D& MicroMean,
              (OEE - O * EE - 2 * OE * E + 2 * O * E * E);
 }
 
+template <class TEnsemble>
+vec1<double> reweight_dT2(const DiscreteAxis2D& DOS,
+                          const DiscreteAxis2D& MicroMean,
+                          const vec1<std::pair<double, double>>& Parameters) {
+  auto red_params = Parameters;
+  typedef std::pair<double, double> TP;
+  std::sort(red_params.begin(), red_params.end(),
+            [](const TP& a, const TP& b) { return a.second < b.second; });
+  red_params.erase(std::unique(red_params.begin(), red_params.end()),
+                   red_params.end());
+  double min = std::numeric_limits<double>::max();
+  double minE = std::numeric_limits<double>::max();
+  double minEE = std::numeric_limits<double>::max();
+  double minOE = std::numeric_limits<double>::max();
+  double minOEE = std::numeric_limits<double>::max();
+  // TODO: for min no reduction is necessary, could be calculated at k == 0
+  #pragma omp parallel for reduction(min : min, minE, minOE)
+  for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
+    const double E1 = DOS.get_value_first(i);
+    for (int j = 0; j < DOS.get_num_bins_second(); ++j) {
+      const double E2 = DOS.get_value_second(j);
+      const int index = DOS.get_index(i, j);
+      if (std::isfinite(MicroMean[index])) {
+        min = std::min(min, MicroMean[index]);
+        for (size_t k = 0; k < red_params.size(); ++k) {
+          const double E = TEnsemble::ham(E1, red_params[k].second, E2);
+          minE = std::min(minE, E);
+          minEE = std::min(minEE, E * E);
+          minOE = std::min(minOE, MicroMean[index] * E);
+          minOEE = std::min(minOEE, MicroMean[index] * E * E);
+        }
+      }
+    }
+  }
+  double shiftO = min - 0.1;
+  double shiftE = minE - 0.1;
+  double shiftEE = minEE - 0.1;
+  double shiftOE = minOE - 0.1;
+  double shiftOEE = minOEE - 0.1;
+
+  vec1<double> tmp(Parameters.size(), log_zero<double>());
+#pragma omp parallel for
+  for (size_t k = 0; k < Parameters.size(); ++k) {
+    double lnZ = log_zero<double>();
+    for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
+      const double E1 = DOS.get_value_first(i);
+      for (int j = 0; j < DOS.get_num_bins_second(); ++j) {
+        const double E2 = DOS.get_value_second(j);
+        const int index = DOS.get_index(i, j);
+        if (std::isfinite(DOS[index])) {
+          lnZ = addlogwise(lnZ, DOS[index] + TEnsemble::log_weight(
+                                                 Parameters[k].first, E1,
+                                                 Parameters[k].second, E2));
+        }
+      }
+    }
+
+    double O = log_zero<double>();
+    double OE = log_zero<double>();
+    double OEE = log_zero<double>();
+    double E = log_zero<double>();
+    double EE = log_zero<double>();
+    for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
+      const double e1 = DOS.get_value_first(i);
+      for (int j = 0; j < DOS.get_num_bins_second(); ++j) {
+        const double e2 = DOS.get_value_second(j);
+        const int index = DOS.get_index(i, j);
+        if (std::isfinite(DOS[index]) and std::isfinite(MicroMean[index])) {
+          double tmp = DOS[index] +
+                       TEnsemble::log_weight(Parameters[k].first, e1,
+                                             Parameters[k].second, e2) -
+                       lnZ;
+          double e = TEnsemble::ham(e1, Parameters[k].second, e2);
+          O = addlogwise(O, tmp + std::log(MicroMean[index] - shiftO));
+          OE = addlogwise(OE, tmp + std::log(e*MicroMean[index] - shiftOE));
+          OEE = addlogwise(OEE, tmp + std::log(e*e*MicroMean[index] - shiftOEE));
+          E = addlogwise(E, tmp + std::log((e)-shiftE));
+          EE = addlogwise(EE, tmp + std::log((e*e)-shiftEE));
+        }
+      }
+    }
+    O = std::exp(O) + shiftO;
+    OE = std::exp(OE) + shiftOE;
+    OEE = std::exp(OEE) + shiftOEE;
+    E = std::exp(E) + shiftE;
+    EE = std::exp(EE) + shiftE;
+    tmp[k] = 2 * Parameters[k].first * Parameters[k].first *
+                 Parameters[k].first * (O * E - OE) +
+             Parameters[k].first * Parameters[k].first * Parameters[k].first *
+                 Parameters[k].first *
+                 (OEE - O * EE - 2 * OE * E + 2 * O * E * E);
+  }
+  return tmp;
+}
 } /* end of namespace WHAM2D */ 
   
 } /* end of namespace consus */ 

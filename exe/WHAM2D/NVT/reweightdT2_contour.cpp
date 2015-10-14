@@ -69,7 +69,7 @@ int main(int argc, char const *argv[])
   }
   vec1d results(Parameters.size(), 0);
 
-  results = reweight_dT<NVT>(DOS, MicroMeans[column], Parameters);
+  results = reweight_dT2<NVT>(DOS, MicroMeans[column], Parameters);
 
   path = "results";
   boost::filesystem::create_directories(path);

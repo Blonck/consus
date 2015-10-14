@@ -215,26 +215,38 @@ int main(int argc, char const *argv[])
       }
     }
 
-  for (size_t k = 0; k < Kappas.size(); ++k){
-    for (size_t i = 0; i < zeros[k].size(); ++i){
-      means_zero[k][i] = means_zero[k][i]/static_cast<double>(num_bins_zero[k][i]);
-      error_zero[k][i] -= static_cast<double>(num_bins_zero[k][i])*means_zero[k][i]*means_zero[k][i];
-      error_zero[k][i] *= static_cast<double>(num_bins_zero[k][i]-1)/static_cast<double>(num_bins_zero[k][i]);
-      error_zero[k][i] = std::sqrt(error_zero[k][i]);
-      means_value[k][i] = means_value[k][i]/static_cast<double>(num_bins_zero[k][i]);
-      error_value[k][i] -= static_cast<double>(num_bins_zero[k][i])*means_value[k][i]*means_value[k][i];
-      error_value[k][i] *= static_cast<double>(num_bins_zero[k][i]-1)/static_cast<double>(num_bins_zero[k][i]);
-      error_value[k][i] = std::sqrt(error_value[k][i]);
-      means_dT[k][i] = means_dT[k][i]/static_cast<double>(num_bins_zero[k][i]);
-      error_dT[k][i] -= static_cast<double>(num_bins_zero[k][i])*means_dT[k][i]*means_dT[k][i];
-      error_dT[k][i] *= static_cast<double>(num_bins_zero[k][i]-1)/static_cast<double>(num_bins_zero[k][i]);
-      error_dT[k][i] = std::sqrt(error_dT[k][i]);
-      means_dT2[k][i] = means_dT2[k][i]/static_cast<double>(num_bins_zero[k][i]);
-      error_dT2[k][i] -= static_cast<double>(num_bins_zero[k][i])*means_dT2[k][i]*means_dT2[k][i];
-      error_dT2[k][i] *= static_cast<double>(num_bins_zero[k][i]-1)/static_cast<double>(num_bins_zero[k][i]);
-      error_dT2[k][i] = std::sqrt(error_dT2[k][i]);
+    for (size_t k = 0; k < Kappas.size(); ++k) {
+      for (size_t i = 0; i < zeros[k].size(); ++i) {
+        means_zero[k][i] =
+            means_zero[k][i] / static_cast<double>(num_bins_zero[k][i]);
+        error_zero[k][i] -= static_cast<double>(num_bins_zero[k][i]) *
+                            means_zero[k][i] * means_zero[k][i];
+        error_zero[k][i] *= static_cast<double>(num_bins_zero[k][i] - 1) /
+                            static_cast<double>(num_bins_zero[k][i]);
+        error_zero[k][i] = std::sqrt(error_zero[k][i]);
+        means_value[k][i] =
+            means_value[k][i] / static_cast<double>(num_bins_zero[k][i]);
+        error_value[k][i] -= static_cast<double>(num_bins_zero[k][i]) *
+                             means_value[k][i] * means_value[k][i];
+        error_value[k][i] *= static_cast<double>(num_bins_zero[k][i] - 1) /
+                             static_cast<double>(num_bins_zero[k][i]);
+        error_value[k][i] = std::sqrt(error_value[k][i]);
+        means_dT[k][i] =
+            means_dT[k][i] / static_cast<double>(num_bins_zero[k][i]);
+        error_dT[k][i] -= static_cast<double>(num_bins_zero[k][i]) *
+                          means_dT[k][i] * means_dT[k][i];
+        error_dT[k][i] *= static_cast<double>(num_bins_zero[k][i] - 1) /
+                          static_cast<double>(num_bins_zero[k][i]);
+        error_dT[k][i] = std::sqrt(error_dT[k][i]);
+        means_dT2[k][i] =
+            means_dT2[k][i] / static_cast<double>(num_bins_zero[k][i]);
+        error_dT2[k][i] -= static_cast<double>(num_bins_zero[k][i]) *
+                           means_dT2[k][i] * means_dT2[k][i];
+        error_dT2[k][i] *= static_cast<double>(num_bins_zero[k][i] - 1) /
+                           static_cast<double>(num_bins_zero[k][i]);
+        error_dT2[k][i] = std::sqrt(error_dT2[k][i]);
+      }
     }
-  }
 
   path = "results/Maximas";
   boost::filesystem::create_directories(path);

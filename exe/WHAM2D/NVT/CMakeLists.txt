@@ -33,5 +33,8 @@ target_link_libraries(NVT2D_reweight_contour ${Boost_LIBRARIES})
 add_executable (NVT2D_reweightdT_contour reweightdT_contour.cpp)
 target_link_libraries(NVT2D_reweightdT_contour ${Boost_LIBRARIES})
 
+add_executable (NVT2D_reweightdT2_contour reweightdT2_contour.cpp)
+target_link_libraries(NVT2D_reweightdT2_contour ${Boost_LIBRARIES})
+
 add_executable (NVT2D_searchMinMax searchMinMax.cpp)
 target_link_libraries(NVT2D_searchMinMax ${Boost_LIBRARIES})
