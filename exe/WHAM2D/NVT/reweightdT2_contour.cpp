@@ -95,9 +95,9 @@ int main(int argc, char const *argv[])
   std::string path_contour = path + "/contour";
   boost::filesystem::create_directories(path_contour);
 
-  std::string filename = path_contour + "/" + replacediv(header[column]) + "_dT.dat";
+  std::string filename = path_contour + "/" + replacediv(header[column]) + "_dT2.dat";
   std::ofstream out(filename, std::ios::trunc);
-  out << "#Kappa Temperature " << header[column] << "_dT\n";
+  out << "#Kappa Temperature " << header[column] << "_dT2\n";
   for (size_t k = 0; k < Parameters.size(); ++k) {
     out << Parameters[k].second << " " << Temperatures[k] << " " << results[k]
         << "\n";

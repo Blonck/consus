@@ -2,6 +2,7 @@
 #include <iostream>
 #include <chrono>
 #include <regex>
+#include <omp.h>
 #include "../../src/search/where_diff.hpp"
 #include "../../src/search/find_zero_brent.hpp"
 #include "../../src/data/load_file.hpp"
@@ -10,7 +11,6 @@
 #include "../../src/DiscreteAxis2D.hpp"
 #include "../../src/WHAM2D/WHAM2D.hpp"
 
-#include <omp.h>
 #include "boost/filesystem.hpp"
 #include "boost/progress.hpp"
 

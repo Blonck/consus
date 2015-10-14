@@ -1,8 +1,5 @@
 include_directories(.)
 
-add_executable (reweightE reweightE.cpp)
-target_link_libraries(reweightE ${Boost_LIBRARIES})
-
 add_executable (NVT2D_makeDOS makeDOS.cpp)
 target_link_libraries(NVT2D_makeDOS ${Boost_LIBRARIES})
 
