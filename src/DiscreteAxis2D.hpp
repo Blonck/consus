@@ -195,7 +195,7 @@ public:
         << "#StepFirst " << hist.get_step_first() << "\n"
         << "#CenterMinSecond " << hist.get_center_min_second() << "\n"
         << "#CenterMaxSecond " << hist.get_center_max_second() << "\n"
-        << "#StepSecond " << hist.get_step_first() << "\n";
+        << "#StepSecond " << hist.get_step_second() << "\n";
     for (int i = 0; i < hist.get_num_bins_first(); i++) {
       for (int j = 0; j < hist.get_num_bins_second(); ++j) {
         out << hist.get_value_first(i) << " "
