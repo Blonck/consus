@@ -67,18 +67,21 @@ public:
   int get_bin_first(const double value) const noexcept {
     assert(value >= Min_First_);
     assert(value <= Max_First_ + Step_First_);
+    assert((value - Min_First_) * Inv_Step_First_ < Num_Bins_First_);
     return static_cast<int>((value - Min_First_) * Inv_Step_First_);
   }
 
   int get_bin_second(const double value) const noexcept {
     assert(value >= Min_Second_);
     assert(value <= Max_Second_ + Step_Second_);
+    assert((value - Min_Second_) * Inv_Step_Second_ < Num_Bins_Second_);
     return static_cast<int>((value - Min_Second_) * Inv_Step_Second_);
   }
 
 
   inline int get_index(const int index_first, const int index_second) const
       noexcept {
+    assert(index_second + index_first * Num_Bins_Second_ < size());
     return index_second + index_first * Num_Bins_Second_;
   }
 
@@ -229,9 +232,9 @@ DiscreteAxis2D::DiscreteAxis2D(const double Min_First, const double Max_First,
       Center_Min_Second_(Min_Second_ + 0.5 * Step_Second_),
       Inv_Step_Second_(1.0 / Step_Second_),
       Num_Bins_First_(
-          static_cast<int>((Max_First_ - Min_First_) / Step_First_) + 1),
+          static_cast<int>((Max_First_ - Min_First_) * Inv_Step_First_) + 1),
       Num_Bins_Second_(
-          static_cast<int>((Max_Second_ - Min_Second_) / Step_Second_) + 1),
+          static_cast<int>((Max_Second_ - Min_Second_) * Inv_Step_Second_) + 1),
       Array_(Num_Bins_First_ * Num_Bins_Second_, Initial_Value) {
   assert(Min_First_ < Max_First_);
   assert(Min_Second_ < Max_Second_);
@@ -264,20 +267,13 @@ inline int DiscreteAxis2D::get_bin(const double value_first,
       static_cast<int>((value_first - Min_First_) * Inv_Step_First_);
   int pos_second =
       static_cast<int>((value_second - Min_Second_) * Inv_Step_Second_);
+  assert(pos_second + pos_first * Num_Bins_Second_ < size());
   return pos_second + pos_first * Num_Bins_Second_;
 }
 
-inline int DiscreteAxis2D::get_bin(
-    const std::pair<double, double> &value) const noexcept{
-  assert(value.first >= Min_First_);
-  assert(value.first <= Max_First_ + Step_First_);
-  assert(value.second >= Min_Second_);
-  assert(value.second <= Max_Second_ + Step_Second_);
-  int pos_first =
-      static_cast<int>((value.first - Min_First_) * Inv_Step_First_);
-  int pos_second =
-      static_cast<int>((value.second - Min_Second_) * Inv_Step_Second_);
-  return pos_second + pos_first * Num_Bins_Second_;
+inline int DiscreteAxis2D::get_bin(const std::pair<double, double> &value) const
+    noexcept {
+  return get_bin(value.first, value.second);
 }
 
 inline void serialize(const DiscreteAxis2D& t, std::ostream& out) {

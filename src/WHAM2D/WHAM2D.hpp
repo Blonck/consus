@@ -289,9 +289,9 @@ template <class TEnsemble>
 double calc_lnZ_reduced(const DiscreteAxis2D& DOS, const HistInfo2D& HistInfo,
                         const std::pair<double, double>& Parameter) {
   double lnZ = log_zero<double>();
-    for (int i = HistInfo.ffi_first; i < HistInfo.lfi_first; ++i) {
+    for (int i = HistInfo.ffi_first; i <= HistInfo.lfi_first; ++i) {
       auto E1 = DOS.get_value_first(i);
-      for (int j = HistInfo.ffi_second; j < HistInfo.lfi_second; ++j) {
+      for (int j = HistInfo.ffi_second; j <= HistInfo.lfi_second; ++j) {
         auto E2 = DOS.get_value_second(j);
         int index = DOS.get_index(i, j);
         lnZ = addlogwise(
@@ -332,9 +332,9 @@ vec1<double> calc_lnZ_reduced(
   assert(Parameters.size() == HistInfos.size());
   #pragma omp parallel for
   for (size_t k = 0; k < Parameters.size(); ++k) {
-    for (int i = HistInfos[k].ffi_first; i < HistInfos[k].lfi_first; ++i) {
+    for (int i = HistInfos[k].ffi_first; i <= HistInfos[k].lfi_first; ++i) {
       auto E1 = DOS.get_value_first(i);
-      for (int j = HistInfos[k].ffi_second; j < HistInfos[k].lfi_second; ++j) {
+      for (int j = HistInfos[k].ffi_second; j <= HistInfos[k].lfi_second; ++j) {
         auto E2 = DOS.get_value_second(j);
         int index = DOS.get_index(i, j);
         lnZ[k] = addlogwise(lnZ[k], DOS[index] + TEnsemble::log_weight(
