@@ -163,7 +163,6 @@ int main(int argc, char const *argv[])
             std::vector<DiscreteAxis2D> MicroMeans;
             std::vector<std::string> header;
             dlib::deserialize(jk_paths[j] + "/logDOS.obj") >> DOS;
-            dlib::deserialize(jk_paths[j] + "/header.obj") >> header;
             dlib::deserialize(jk_paths[j] + "/MicroMeans.obj") >> MicroMeans;
             auto calc_dT2 = [&](const double beta) {
               return reweight_dT2<NVT>(DOS, MicroMeans[column], {beta, Kappas[k]});

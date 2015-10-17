@@ -22,8 +22,6 @@ int main()
   std::vector<std::string> header;
 
   dlib::deserialize(path + "/logDOS.obj") >> DOS;
-  dlib::deserialize(path + "/header.obj") >> header;
-  dlib::deserialize(path + "/MicroMeans.obj") >> MicroMeans;
 
   path = "results/logWeights";
 
