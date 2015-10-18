@@ -2,15 +2,15 @@
 #include <iostream>
 #include <chrono>
 #include <regex>
-#include <omp.h>
-#include "../../src/search/where_diff.hpp"
-#include "../../src/search/find_zero_brent.hpp"
-#include "../../src/data/load_file.hpp"
-#include "../../src/data/all_matching.hpp"
-#include "../../src/vector/helper.hpp"
-#include "../../src/DiscreteAxis2D.hpp"
-#include "../../src/WHAM2D/WHAM2D.hpp"
+#include "../../../src/search/where_diff.hpp"
+#include "../../../src/search/find_zero_brent.hpp"
+#include "../../../src/data/load_file.hpp"
+#include "../../../src/data/all_matching.hpp"
+#include "../../../src/vector/helper.hpp"
+#include "../../../src/DiscreteAxis2D.hpp"
+#include "../../../src/WHAM2D/WHAM2D.hpp"
 
+#include <omp.h>
 #include "boost/filesystem.hpp"
 #include "boost/progress.hpp"
 
@@ -56,6 +56,7 @@ int main(int argc, char const *argv[])
   vec1d Temperatures;
   vec1d Betas;
   vec1d Kappas;
+  vec1<std::pair<double, double>> Parameters;
 
   for (double Temp = TempStart; Temp <= TempEnd; Temp += TempStep){
     Temperatures.push_back(Temp);
@@ -64,17 +65,13 @@ int main(int argc, char const *argv[])
   for (double Kappa = KappaStart; Kappa <= KappaEnd; Kappa += KappaStep){
     Kappas.push_back(Kappa);
   }
-  vec2d results(Kappas.size(), vec1d(Temperatures.size()));
-
-  std::cout << header << "\n";
-
   for (size_t i = 0; i < Kappas.size(); ++i) {
     for (size_t j = 0; j < Betas.size(); ++j){
-      double beta = Betas[i];
-      double kappa = Kappas[j];
-      results[i][j] = reweight_dT2<NVT>(DOS, MicroMeans[column], {beta, kappa});
+      Parameters.push_back({Betas[j], Kappas[i]});
     }
   }
+  vec1d results(Parameters.size());
+  results = reweight_dT2<NVT>(DOS, MicroMeans[column], Parameters);
 
   vec2d zeros(Kappas.size());
   vec2d dT2(Kappas.size());
@@ -82,13 +79,17 @@ int main(int argc, char const *argv[])
   vec2d value(Kappas.size());
   std::vector< std::vector<std::string> > kind(Kappas.size());
 
-#pragma omp parallel for
+//#pragma omp parallel for
   for (size_t i = 0; i < Kappas.size(); ++i) {
     std::cout << Kappas[i] << "\n";
+    std::cout << "searching min/max for Kappa: " << Kappas[i] << "\n";
+    vec1d kresults(results.begin() + i * Betas.size(),
+                   results.begin() + (i + 1) * Betas.size());
+    assert(Betas.size() == kresults.size());
     auto change_sign = [](double a, double b)->bool {
       return (std::signbit(a) != std::signbit(b));
     };
-    auto pre_zeros = where_diff(results[i], change_sign);
+    auto pre_zeros = where_diff(kresults, change_sign);
     auto calc_dT2 = [&](const double beta) {
       return reweight_dT2<NVT>(DOS, MicroMeans[column], {beta, Kappas[i]});
     };

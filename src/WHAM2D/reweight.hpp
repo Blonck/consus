@@ -337,7 +337,7 @@ vec1<double> reweight_dT2(const DiscreteAxis2D& DOS,
   double minOE = std::numeric_limits<double>::max();
   double minOEE = std::numeric_limits<double>::max();
   // TODO: for min no reduction is necessary, could be calculated at k == 0
-  #pragma omp parallel for reduction(min : min, minE, minOE)
+  #pragma omp parallel for reduction(min : min, minE, minEE, minOE, minOEE)
   for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
     const double E1 = DOS.get_value_first(i);
     for (int j = 0; j < DOS.get_num_bins_second(); ++j) {
@@ -362,7 +362,7 @@ vec1<double> reweight_dT2(const DiscreteAxis2D& DOS,
   double shiftOEE = minOEE - 0.1;
 
   vec1<double> tmp(Parameters.size(), log_zero<double>());
-#pragma omp parallel for
+  #pragma omp parallel for
   for (size_t k = 0; k < Parameters.size(); ++k) {
     double lnZ = log_zero<double>();
     for (int i = 0; i < DOS.get_num_bins_first(); ++i) {
@@ -389,16 +389,15 @@ vec1<double> reweight_dT2(const DiscreteAxis2D& DOS,
         const double e2 = DOS.get_value_second(j);
         const int index = DOS.get_index(i, j);
         if (std::isfinite(DOS[index]) and std::isfinite(MicroMean[index])) {
-          double tmp = DOS[index] +
-                       TEnsemble::log_weight(Parameters[k].first, e1,
-                                             Parameters[k].second, e2) -
-                       lnZ;
-          double e = TEnsemble::ham(e1, Parameters[k].second, e2);
+          double tmpE = TEnsemble::ham(e1, Parameters[k].second, e2);
+          double tmp = DOS[index] - Parameters[k].first * (tmpE)-lnZ;
           O = addlogwise(O, tmp + std::log(MicroMean[index] - shiftO));
-          OE = addlogwise(OE, tmp + std::log(e*MicroMean[index] - shiftOE));
-          OEE = addlogwise(OEE, tmp + std::log(e*e*MicroMean[index] - shiftOEE));
-          E = addlogwise(E, tmp + std::log((e)-shiftE));
-          EE = addlogwise(EE, tmp + std::log((e*e)-shiftEE));
+          OE =
+              addlogwise(OE, tmp + std::log(tmpE * MicroMean[index] - shiftOE));
+          OEE = addlogwise(
+              OEE, tmp + std::log(tmpE * tmpE * MicroMean[index] - shiftOEE));
+          E = addlogwise(E, tmp + std::log(tmpE - shiftE));
+          EE = addlogwise(EE, tmp + std::log(tmpE * tmpE - shiftEE));
         }
       }
     }
@@ -406,7 +405,7 @@ vec1<double> reweight_dT2(const DiscreteAxis2D& DOS,
     OE = std::exp(OE) + shiftOE;
     OEE = std::exp(OEE) + shiftOEE;
     E = std::exp(E) + shiftE;
-    EE = std::exp(EE) + shiftE;
+    EE = std::exp(EE) + shiftEE;
     tmp[k] = 2 * Parameters[k].first * Parameters[k].first *
                  Parameters[k].first * (O * E - OE) +
              Parameters[k].first * Parameters[k].first * Parameters[k].first *
