@@ -1,37 +1,19 @@
 include_directories(.)
 
-add_executable (NVT2D_makeDOS makeDOS.cpp)
-target_link_libraries(NVT2D_makeDOS ${Boost_LIBRARIES})
+macro(compile name)
+  add_executable(NVT2D_${name} "${name}.cpp")
+  target_link_libraries(NVT2D_${name} ${Boost_LIBRARIES})
+endmacro(compile)
 
-add_executable (NVT2D_makeHists makeHists.cpp)
-target_link_libraries(NVT2D_makeHists ${Boost_LIBRARIES})
-
-add_executable (NVT2D_makeOverlap makeOverlap.cpp)
-target_link_libraries(NVT2D_makeOverlap ${Boost_LIBRARIES})
-
-add_executable (NVT2D_makeMicroMeans makeMicroMeans.cpp)
-target_link_libraries(NVT2D_makeMicroMeans ${Boost_LIBRARIES})
-
-add_executable (NVT2D_makeDOSJK makeDOSJK.cpp)
-target_link_libraries(NVT2D_makeDOSJK ${Boost_LIBRARIES})
-
-add_executable (NVT2D_reweight_constK reweight_constK.cpp)
-target_link_libraries(NVT2D_reweight_constK ${Boost_LIBRARIES})
-
-add_executable (NVT2D_reweightdT_constK reweightdT_constK.cpp)
-target_link_libraries(NVT2D_reweightdT_constK ${Boost_LIBRARIES})
-
-add_executable (NVT2D_reweightdT2_constK reweightdT2_constK.cpp)
-target_link_libraries(NVT2D_reweightdT2_constK ${Boost_LIBRARIES})
-
-add_executable (NVT2D_reweight_contour reweight_contour.cpp)
-target_link_libraries(NVT2D_reweight_contour ${Boost_LIBRARIES})
-
-add_executable (NVT2D_reweightdT_contour reweightdT_contour.cpp)
-target_link_libraries(NVT2D_reweightdT_contour ${Boost_LIBRARIES})
-
-add_executable (NVT2D_reweightdT2_contour reweightdT2_contour.cpp)
-target_link_libraries(NVT2D_reweightdT2_contour ${Boost_LIBRARIES})
-
-add_executable (NVT2D_searchMinMax searchMinMax.cpp)
-target_link_libraries(NVT2D_searchMinMax ${Boost_LIBRARIES})
+compile(makeDOS)
+compile(makeHists)
+compile(makeOverlap)
+compile(makeMicroMeans)
+compile(reweight_constK)
+compile(reweightdT_constK)
+compile(reweightdT2_constK)
+compile(reweight_constT)
+compile(reweightdT_constT)
+compile(reweight_contour)
+compile(reweightdT_contour)
+compile(reweightdT2_contour)

@@ -33,12 +33,12 @@ int main(int argc, char const *argv[])
   dlib::deserialize(path + "/MicroMeans.obj") >> MicroMeans;
 
 
-  const double TempStart = std::stod(argv[1]);
-  const double TempEnd = std::stod(argv[2]);
-  const double TempStep = std::stod(argv[3]);
-  const double Kappa = std::stod(argv[4]);
 
-  const size_t column = std::stod(argv[5]);
+  const size_t column = std::stod(argv[1]);
+  const double TempStart = std::stod(argv[2]);
+  const double TempEnd = std::stod(argv[3]);
+  const double TempStep = std::stod(argv[4]);
+  const double Kappa = std::stod(argv[5]);
 
   std::cout << "reweight from Temp " << TempStart << " to " << TempEnd << "\n";
 

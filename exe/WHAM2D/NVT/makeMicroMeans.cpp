@@ -39,10 +39,11 @@ int main()
   std::cout << header << "\n";
 
   bool add_eig = false;
+  int first_gyr = 0;
   if (header.size() > 10) {
-    if (header[5] == "Rxx" and header[6] == "Ryy" and header[7] ==
-        "Rzz" and header[8] == "Rxy" and header[9] == "Rxz" and header[10] ==
-        "Ryz") {
+    auto cur =  std::find(header.begin(), header.end(), "Rxx");
+    first_gyr = std::distance(header.begin(), cur);
+    if (cur != header.end() and (cur+5) < header.end()){
       add_eig = true;
     }
   }
@@ -66,7 +67,9 @@ int main()
       std::exit(1);
     }
     if (add_eig){
-      consus::eig::add_eigenvalues(timeseries, 5, 6, 7, 8, 9, 10);
+      consus::eig::add_eigenvalues(timeseries, first_gyr, first_gyr + 1,
+                                   first_gyr + 2, first_gyr + 3, first_gyr + 4,
+                                   first_gyr + 5);
     }
     for (size_t j = 0; j < timeseries[col1].size(); ++j) {
       const double E1 = timeseries[col1][j];

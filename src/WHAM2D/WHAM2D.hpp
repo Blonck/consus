@@ -231,6 +231,7 @@ double estimate_lnZ_from_hist(const DiscreteAxis2D& Hist,
                          const std::pair<double, double>& Parameter,
                          const std::pair<double, double>& Parameter_Target) {
   auto log_Z_ratio = log_zero<double>();
+  // Z_t =  \sum_{E_1, E_2} H_i W_t(E_1, E_2)/W_i(E_1, E_2)
   //TODO: maybe pragma with log_Z_ratio shared
   for (int i = HistInfo.ffi_first; i <= HistInfo.lfi_first; ++i) {
     auto E1 = Hist.get_value_first(i);

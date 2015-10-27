@@ -34,10 +34,11 @@ int main(int argc, char const *argv[])
   dlib::deserialize(path + "/header.obj") >> header;
   dlib::deserialize(path + "/MicroMeans.obj") >> MicroMeans;
 
-  const double TempStart = std::stod(argv[1]);
-  const double TempEnd = std::stod(argv[2]);
-  const double TempStep = std::stod(argv[3]);
-  const double Kappa = std::stod(argv[4]);
+  const int column = std::stoi(argv[1]);
+  const double TempStart = std::stod(argv[2]);
+  const double TempEnd = std::stod(argv[3]);
+  const double TempStep = std::stod(argv[4]);
+  const double Kappa = std::stod(argv[5]);
 
   std::cout << "reweight from Temp " << TempStart << " to " << TempEnd << "\n";
 
@@ -53,77 +54,76 @@ int main(int argc, char const *argv[])
 
   std::cout << header << "\n";
 
-  for (size_t column = 0; column < header.size(); column++){
-    std::cout << "reweighting " << header[column] << "\n";
-    vec1d results(Temperatures.size());
-    boost::progress_display progress1(Betas.size());
-    for (size_t j = 0; j < Betas.size(); ++j) {
-      ++progress1;
-      results[j] = reweight_dT2<NVT>(DOS, MicroMeans[column], {Betas[j], Kappa});
-    }
-
-    vec1d jk_means(Temperatures.size());
-    vec1d jk_error(Temperatures.size());
-    boost::regex filter(".*[0-9]+");
-    auto jk_paths = all_matching_paths(path + "/JK/", filter);
-    std::sort(jk_paths.begin(), jk_paths.end());
-    size_t num_bins = jk_paths.size();
-    vec2d results_jk(Temperatures.size(), vec1d(num_bins, 0));
-    boost::progress_display progress2(num_bins * Betas.size());
-    #pragma omp parallel for
-    for (size_t i = 0; i < num_bins; ++i) {
-      DiscreteAxis2D jk_DOS;
-      std::vector<DiscreteAxis2D> jk_MicroMeans;
-      dlib::deserialize(jk_paths[i] + "/logDOS.obj") >> jk_DOS;
-      dlib::deserialize(jk_paths[i] + "/MicroMeans.obj") >> jk_MicroMeans;
-      for (size_t j = 0; j < Betas.size(); ++j) {
-        ++progress2;
-        results_jk[j][i] =
-            reweight_dT2<NVT>(jk_DOS, jk_MicroMeans[column], {Betas[j], Kappa});
-      }
-    }
-
-    for (size_t i = 0; i < results_jk.size(); ++i) {
-      for (size_t j = 0; j < results_jk[i].size(); ++j) {
-        jk_means[i] += results_jk[i][j];
-        jk_error[i] += results_jk[i][j] * results_jk[i][j];
-      }
-    }
-    for (size_t i = 0; i < jk_means.size(); ++i) {
-      jk_means[i] = jk_means[i] / static_cast<double>(num_bins);
-      jk_error[i] -= static_cast<double>(num_bins) * jk_means[i] * jk_means[i];
-      jk_error[i] *=
-          static_cast<double>(num_bins - 1) / static_cast<double>(num_bins);
-      jk_error[i] = std::sqrt(jk_error[i]);
-    }
-
-    std::string pathr = "results";
-    boost::filesystem::create_directories(pathr);
-
-    std::string path_kappa = pathr + "/Kappa";
-    boost::filesystem::create_directories(path_kappa);
-
-    auto replacediv = [](const std::string name) {
-      std::string ret = name;
-      auto pos = name.find('/');
-      if (pos != std::string::npos) {
-        ret = name.substr(0, pos);
-        ret = ret + "div";
-        ret = ret + name.substr(pos + 1);
-      }
-      return ret;
-    };
-
-    std::string path_files = path_kappa + "/" + std::to_string(Kappa);
-    boost::filesystem::create_directories(path_files);
-    std::string filename =
-        path_files + "/" + replacediv(header[column]) + "_dT2.dat";
-    std::ofstream out(filename, std::ios::trunc);
-    out << "#Temperature " << header[column] << "_dT2 "
-        << "error(" << header[column] << "_dT)\n";
-    for (size_t j = 0; j < Temperatures.size(); ++j) {
-      out << Temperatures[j] << " " << results[j] << " " << jk_error[j] << "\n";
-    }
-    out.close();
+  std::cout << "reweighting " << header[column] << "\n";
+  vec1d results(Temperatures.size());
+  boost::progress_display progress1(Betas.size());
+  for (size_t j = 0; j < Betas.size(); ++j) {
+    ++progress1;
+    results[j] = reweight_dT2<NVT>(DOS, MicroMeans[column], {Betas[j], Kappa});
   }
+
+  vec1d jk_means(Temperatures.size());
+  vec1d jk_error(Temperatures.size());
+  boost::regex filter(".*[0-9]+");
+  auto jk_paths = all_matching_paths(path + "/JK/", filter);
+  std::sort(jk_paths.begin(), jk_paths.end());
+  size_t num_bins = jk_paths.size();
+  vec2d results_jk(Temperatures.size(), vec1d(num_bins, 0));
+  boost::progress_display progress2(num_bins * Betas.size());
+#pragma omp parallel for
+  for (size_t i = 0; i < num_bins; ++i) {
+    DiscreteAxis2D jk_DOS;
+    std::vector<DiscreteAxis2D> jk_MicroMeans;
+    dlib::deserialize(jk_paths[i] + "/logDOS.obj") >> jk_DOS;
+    dlib::deserialize(jk_paths[i] + "/MicroMeans.obj") >> jk_MicroMeans;
+    for (size_t j = 0; j < Betas.size(); ++j) {
+      ++progress2;
+      results_jk[j][i] =
+          reweight_dT2<NVT>(jk_DOS, jk_MicroMeans[column], {Betas[j], Kappa});
+    }
+  }
+
+  for (size_t i = 0; i < results_jk.size(); ++i) {
+    for (size_t j = 0; j < results_jk[i].size(); ++j) {
+      jk_means[i] += results_jk[i][j];
+      jk_error[i] += results_jk[i][j] * results_jk[i][j];
+    }
+  }
+  for (size_t i = 0; i < jk_means.size(); ++i) {
+    jk_means[i] = jk_means[i] / static_cast<double>(num_bins);
+    jk_error[i] -= static_cast<double>(num_bins) * jk_means[i] * jk_means[i];
+    jk_error[i] *=
+        static_cast<double>(num_bins - 1) / static_cast<double>(num_bins);
+    jk_error[i] = std::sqrt(jk_error[i]);
+  }
+
+  std::string pathr = "results";
+  boost::filesystem::create_directories(pathr);
+
+  std::string path_kappa = pathr + "/Kappa";
+  boost::filesystem::create_directories(path_kappa);
+
+  auto replacediv = [](const std::string name) {
+    std::string ret = name;
+    auto pos = name.find('/');
+    if (pos != std::string::npos) {
+      ret = name.substr(0, pos);
+      ret = ret + "div";
+      ret = ret + name.substr(pos + 1);
+    }
+    return ret;
+  }
+  ;
+
+  std::string path_files = path_kappa + "/" + std::to_string(Kappa);
+  boost::filesystem::create_directories(path_files);
+  std::string filename =
+      path_files + "/" + replacediv(header[column]) + "_dT2.dat";
+  std::ofstream out(filename, std::ios::trunc);
+  out << "#Temperature " << header[column] << "_dT2 "
+      << "error(" << header[column] << "_dT)\n";
+  for (size_t j = 0; j < Temperatures.size(); ++j) {
+    out << Temperatures[j] << " " << results[j] << " " << jk_error[j] << "\n";
+  }
+  out.close();
 }
