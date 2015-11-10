@@ -414,6 +414,70 @@ vec1<double> reweight_dT2(const DiscreteAxis2D& DOS,
   }
   return tmp;
 }
+
+template <class TEnsemble>
+vec1<double> reweight_prob(const DiscreteAxis2D& DOS,
+                           const DiscreteAxis2D& MicroMean,
+                           const std::pair<double, double>& Parameter,
+                           vec1<double>& bounds) {
+  std::sort(bounds.begin(), bounds.end());
+  vec1<double> result(bounds.size()+1, log_zero<double>());
+  double lnZ = log_zero<double>();
+  for (int i = 0; i < DOS.get_num_bins_first(); ++i){
+    const double E1 = DOS.get_value_first(i);
+    for (int j = 0; j < DOS.get_num_bins_second(); ++j){
+      const double E2 = DOS.get_value_second(j);
+      const int index = DOS.get_index(i, j);
+      if (std::isfinite(DOS[index])){
+        auto logweight =
+            TEnsemble::log_weight(Parameter.first, E1, Parameter.second, E2);
+        lnZ = addlogwise(lnZ, DOS[index] + logweight);
+        if (std::isfinite(MicroMean[index])) {
+          const double value = MicroMean[index];
+          auto upper = std::upper_bound(bounds.begin(), bounds.end(), value);
+          size_t num = std::distance(bounds.begin(), upper);
+          if (upper != bounds.end()) {
+            result[num] = addlogwise(result[num], DOS[index] + logweight);
+          } else {
+            result.back() = addlogwise(result.back(), DOS[index] + logweight);
+          }
+        }
+      }
+    }
+  }
+  std::cout << "####################" << "\n";
+  for (size_t i = 0; i < result.size(); ++i){
+    result[i] -= lnZ;
+    result[i] = std::exp(result[i]);
+  }
+  return result;
+}
+
+template <class TEnsemble>
+DiscreteAxis2D reweight_hist2d(const DiscreteAxis2D& DOS,
+                               const std::pair<double, double>& Parameter) {
+  DiscreteAxis2D result(DOS, 0.0);
+  double lnZ = log_zero<double>();
+  for (int i = 0; i < DOS.get_num_bins_first(); ++i){
+    const double E1 = DOS.get_value_first(i);
+    for (int j = 0; j < DOS.get_num_bins_second(); ++j){
+      const double E2 = DOS.get_value_second(j);
+      const int index = DOS.get_index(i, j);
+      auto logweight =
+          TEnsemble::log_weight(Parameter.first, E1, Parameter.second, E2);
+      if (std::isfinite(DOS[index])){
+        result[index] = DOS[index] + logweight;
+        lnZ = addlogwise(lnZ, result[index]);
+      }
+    }
+  }
+  for (int i = 0; i < result.size(); ++i){
+    result[i] -= lnZ;
+    result[i] = std::exp(result[i]);
+  }
+  return result;
+}
+
 } /* end of namespace WHAM2D */ 
   
 } /* end of namespace consus */ 

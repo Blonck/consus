@@ -63,7 +63,10 @@ int main()
     auto timeseries = read_ssv(filenames[i]);
     int length_bins = timeseries[0].size() / NumBins;
     if (timeseries[0].size() % NumBins != 0) {
+      std::cerr << "\n";
       std::cerr << "bin size and time series size doesn't fit\n";
+      std::cerr << filenames[i] << "\n";
+      std::cerr << timeseries[0].size() << " " << NumBins << "\n";
       std::exit(1);
     }
     if (add_eig){
@@ -109,9 +112,7 @@ int main()
   std::cout << "normalize\n";
   for (size_t i = 0; i < MicroMeans.size(); ++i){
     for (int j = 0; j < MicroMeans[i].size(); ++j){
-      if (Hist[j] != 0.0){
-        MicroMeans[i][j] /= Hist[j];
-      }
+      MicroMeans[i][j] /= Hist[j];
     }
   }
   dlib::serialize(path + "/MicroMeans.obj") << MicroMeans;
@@ -120,9 +121,7 @@ int main()
     dlib::deserialize(path_jk + "/" + std::to_string(i) + "/Hist.obj") >> jk_Hist;
     for (size_t j = 0; j < jk_MicroMeans[i].size(); ++j) {
       for (int k = 0; k < jk_MicroMeans[i][j].size(); ++k) {
-        if (Hist[k] != 0.0) {
-          jk_MicroMeans[i][j][k] /= jk_Hist[k];
-        }
+        jk_MicroMeans[i][j][k] /= jk_Hist[k];
       }
     }
     dlib::serialize(path_jk + "/" + std::to_string(i) + "/MicroMeans.obj")

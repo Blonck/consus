@@ -40,28 +40,28 @@ int main(int argc, char const *argv[])
   std::smatch match;
 
   // sort first in kappa and then in T
-  std::sort(filenames.begin(), filenames.end(),
-            [&](const std::string& a, const std::string& b) {
-              std::regex_search(a, match, param_regex);
-              if (match.size() != 3) {
-                std::cerr << "could not determine parameters\n";
-                std::exit(1);
-              }
-              double a_t = std::stod(match[2]);
-              double a_kappa = std::stod(match[1]);
-              std::regex_search(b, match, param_regex);
-              if (match.size() != 3) {
-                std::cerr << "could not determine parameters\n";
-                std::exit(1);
-              }
-              double b_t = std::stod(match[2]);
-              double b_kappa = std::stod(match[1]);
-              if (a_kappa == b_kappa) {
-                return a_t < b_t;
-              } else {
-                return a_kappa < b_kappa;
-              }
-            });
+  std::sort(filenames.begin(), filenames.end(), [&](const std::string & a,
+                                                    const std::string & b) {
+    std::regex_search(a, match, param_regex);
+    if (match.size() != 3) {
+      std::cerr << "could not determine parameters\n";
+      std::exit(1);
+    }
+    double a_t = std::stod(match[2]);
+    double a_kappa = std::stod(match[1]);
+    std::regex_search(b, match, param_regex);
+    if (match.size() != 3) {
+      std::cerr << "could not determine parameters\n";
+      std::exit(1);
+    }
+    double b_t = std::stod(match[2]);
+    double b_kappa = std::stod(match[1]);
+    if (a_kappa == b_kappa) {
+      return a_t < b_t;
+    } else {
+      return a_kappa < b_kappa;
+    }
+  });
 
   // reverse every second sequence of temperatures
   bool flip = false;
