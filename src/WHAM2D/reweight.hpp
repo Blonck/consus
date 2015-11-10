@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <chrono>
 #include "reweight.hpp"
+#include "../DiscreteAxis.hpp"
 #include "../DiscreteAxis2D.hpp"
 #include "../vector/helper.hpp"
 #include "../addlogwise.hpp"
@@ -445,7 +446,6 @@ vec1<double> reweight_prob(const DiscreteAxis2D& DOS,
       }
     }
   }
-  std::cout << "####################" << "\n";
   for (size_t i = 0; i < result.size(); ++i){
     result[i] -= lnZ;
     result[i] = std::exp(result[i]);
@@ -477,6 +477,48 @@ DiscreteAxis2D reweight_hist2d(const DiscreteAxis2D& DOS,
   }
   return result;
 }
+
+template <class TEnsemble>
+DiscreteAxis reweight_hist(const DiscreteAxis2D& DOS, const double step,
+                           const std::pair<double, double>& Parameter) {
+
+  double minE = std::numeric_limits<double>::max();
+  double maxE = std::numeric_limits<double>::lowest();
+  for (int i = 0; i < DOS.get_num_bins_first(); ++i){
+    const double E1 = DOS.get_value_first(i);
+    for (int j = 0; j < DOS.get_num_bins_second(); ++j){
+      const double E2 = DOS.get_value_second(j);
+      const double E = TEnsemble::ham(E1, Parameter.second, E2);
+      minE = std::min(minE, E);
+      maxE = std::max(maxE, E);
+    }
+  }
+
+  DiscreteAxis result(minE, step, maxE, log_zero<double>());
+  double lnZ = log_zero<double>();
+  for (int i = 0; i < DOS.get_num_bins_first(); ++i){
+    const double E1 = DOS.get_value_first(i);
+    for (int j = 0; j < DOS.get_num_bins_second(); ++j){
+      const double E2 = DOS.get_value_second(j);
+      auto logweight =
+          TEnsemble::log_weight(Parameter.first, E1, Parameter.second, E2);
+      const double E = TEnsemble::ham(E1, Parameter.second, E2);
+      const int index = DOS.get_index(i, j);
+      const int rindex = result.get_bin(E);
+      if (std::isfinite(DOS[index])){
+        result[rindex] = addlogwise(result[rindex], DOS[index] + logweight);
+        lnZ = addlogwise(lnZ, DOS[index] + logweight);
+      }
+    }
+  }
+  for (int i = 0; i < result.size(); ++i){
+      result[i] -= lnZ;
+      result[i] = std::exp(result[i]);
+  }
+  return result;
+}
+
+
 
 } /* end of namespace WHAM2D */ 
   

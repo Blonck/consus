@@ -21,4 +21,6 @@ compile(reweight_contour)
 compile(reweightdT_contour)
 compile(reweightdT2_contour)
 
+compile(reweight_hist2d)
+compile(reweight_hist)
 compile(reweight_prob)

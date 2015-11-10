@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <utility>
 
 namespace consus
 {
@@ -34,6 +35,12 @@ struct NVT{
   /// \param E1 second energy term of the Hamiltonian
   static double ham(const double E0, const double Lambda, const double E1) {
     return E0 + Lambda * E1;
+  }
+
+  static std::pair<double, double> minmax_ham(const double E0_Min, const double E0_Max,
+                                              const double Lambda, const double E1_Min,
+                                              const double E1_Max){
+    return std::make_pair(ham(E0_Min, Lambda, E1_Min), ham(E0_Max, Lambda, E1_Max));
   }
 };
 
