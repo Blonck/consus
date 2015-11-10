@@ -2,9 +2,8 @@
 
 GIT_REPOS=("https://github.com/philsquared/Catch.git"
            "https://github.com/davisking/dlib.git"
-           "https://github.com/RLovelett/eigen.git"
-           "https://github.com/google/benchmark.git") 
-GIT_BRANCHS=("master" "master" "master" "master")
+           "https://github.com/RLovelett/eigen.git") 
+GIT_BRANCHS=("master" "master" "master")
 ZIPS=("http://www.agner.org/optimize/vectorclass.zip" )
 ZIPS_NAMES=("vectorclass")
 
