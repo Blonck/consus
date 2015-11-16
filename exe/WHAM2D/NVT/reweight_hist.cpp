@@ -34,7 +34,6 @@ int main(int argc, char const *argv[])
   dlib::deserialize(path + "/header.obj") >> header;
   dlib::deserialize(path + "/MicroMeans.obj") >> MicroMeans;
 
-
   const double Temp= std::stod(argv[1]);
   const double Kappa = std::stod(argv[2]);
   const double step = std::stod(argv[3]);
@@ -44,10 +43,11 @@ int main(int argc, char const *argv[])
 
   std::vector<double> bounds;
   auto Hist = reweight_hist<NVT>(DOS, step, Parameter);
-  std::string pathr = "results/histograms/2D";
+  std::string pathr = "results/histograms/1D";
   boost::filesystem::create_directories(pathr);
 
-  std::string filename = pathr + "/T" + std::to_string(Temp) + "_K" + std::to_string(Kappa) + ".dat";
+  std::string filename = pathr + "/T" + std::to_string(Temp)
+                          + "_K" + std::to_string(Kappa) + ".dat";
   std::ofstream out(filename, std::ios::trunc);
   for (int i = 0; i < Hist.get_num_bins(); ++i){
       out << Hist.get_value(i) << " " << Hist[i] << "\n";
