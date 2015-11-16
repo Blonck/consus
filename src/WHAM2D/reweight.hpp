@@ -481,7 +481,6 @@ DiscreteAxis2D reweight_hist2d(const DiscreteAxis2D& DOS,
 template <class TEnsemble>
 DiscreteAxis reweight_hist(const DiscreteAxis2D& DOS, const double step,
                            const std::pair<double, double>& Parameter) {
-
   double minE = std::numeric_limits<double>::max();
   double maxE = std::numeric_limits<double>::lowest();
   for (int i = 0; i < DOS.get_num_bins_first(); ++i){
@@ -494,7 +493,7 @@ DiscreteAxis reweight_hist(const DiscreteAxis2D& DOS, const double step,
     }
   }
 
-  DiscreteAxis result(minE, step, maxE, log_zero<double>());
+  DiscreteAxis result(minE, maxE, step, log_zero<double>());
   double lnZ = log_zero<double>();
   for (int i = 0; i < DOS.get_num_bins_first(); ++i){
     const double E1 = DOS.get_value_first(i);
@@ -517,8 +516,6 @@ DiscreteAxis reweight_hist(const DiscreteAxis2D& DOS, const double step,
   }
   return result;
 }
-
-
 
 } /* end of namespace WHAM2D */ 
   
