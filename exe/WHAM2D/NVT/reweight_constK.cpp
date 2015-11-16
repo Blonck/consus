@@ -33,7 +33,6 @@ int main(int argc, char const *argv[])
   dlib::deserialize(path + "/header.obj") >> header;
   dlib::deserialize(path + "/MicroMeans.obj") >> MicroMeans;
 
-
   const int column = std::stoi(argv[1]);
   const double TempStart = std::stod(argv[2]);
   const double TempEnd = std::stod(argv[3]);
