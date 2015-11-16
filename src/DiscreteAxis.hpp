@@ -9,7 +9,7 @@
 #include <fstream>
 #include <vector>
 #include <cassert>
-
+#include "Range.hpp"
 #include "definitions.hpp"
 
 namespace consus
@@ -60,8 +60,11 @@ class DiscreteAxis
      assert(this->get_bin(this->get_max() - Step_/100.0) < Num_Bins_);
      
    };
-    /// empty ctor
-    DiscreteAxis(){};
+   DiscreteAxis(const Range& range, const double Initial_Value = 0.0)
+     : DiscreteAxis(range.start, range.end, range.step, Initial_Value){};
+
+   /// empty ctor
+   DiscreteAxis(){};
 
     /// create default copy, move and assign constructors
     DiscreteAxis(const DiscreteAxis&) = default;
