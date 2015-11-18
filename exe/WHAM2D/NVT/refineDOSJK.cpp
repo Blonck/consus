@@ -36,7 +36,6 @@ int main(int argc, char const *argv[])
   int NumBins;
 
   std::string path("analysis");
-  std::string path_jk("analysis/JK");
   dlib::deserialize(path + "/rangeE1.obj") >> rangeE1;
   dlib::deserialize(path + "/rangeE2.obj") >> rangeE2;
   dlib::deserialize(path + "/filenames.obj") >> filenames;
