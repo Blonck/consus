@@ -87,6 +87,8 @@ int main(int argc, char const *argv[])
     dlib::serialize(path + "/Hist.obj") << jk_Hist[j];
     dlib::serialize(path + "/lnZ.obj") << jk_lnZ[j];
     dlib::serialize(path + "/logDOS.obj") << jk_logDOS[j];
+    dlib::serialize(path + "/HistInfo.obj") << jk_HistInfo[j];
+    dlib::serialize(path + "/HistInfos.obj") << jk_HistInfos[j];
   }
   dlib::serialize(path + "/NumBins.obj") << NumBins;
 }
