@@ -219,13 +219,15 @@ DiscreteAxis2D add_histogram2d(const vec2<double>& Timeseries, int col1,
   return tmpHist;
 }
 
-/// preliminary lnZ for Parameter_Target from histogram
-/// measured at Parameter_Target
+/// preliminary lnZ for Parameter from histogram measured at Parameter_Target
 ///
-/// Hist - 2d histogram measured at Parameter
-/// HistInfo - info object for Hist
-/// Parameter - parameters for Hist
-/// Parameter_Target - lnZ is estimated for this parameters
+/// the function implements the logarithmic version of the following sum
+/// Z = \sum( H(E1, E2)*exp(Weight_{Target}(E1, E2))/exp(Weight_{measured}(E1, E2)))
+///
+/// \param Hist - 2d histogram measured at Parameter
+/// \param HistInfo - info object for Hist
+/// \param Parameter - parameters for Hist
+/// \param Parameter_Target - lnZ is estimated for this parameters
 template <class TEnsemble>
 double estimate_lnZ_from_hist(const DiscreteAxis2D& Hist,
                          const HistInfo2D& HistInfo,
@@ -270,6 +272,8 @@ void normalize_logDOS(DiscreteAxis2D& logDOS, const vec1<double>& lnZ) {
   }
 }
 
+/// calculate lnZ for a given logathmic density of states (DOS)
+/// at a certain Parameter
 template <class TEnsemble>
 double calc_lnZ(const DiscreteAxis2D& DOS,
                 const std::pair<double, double>& Parameter) {
@@ -287,6 +291,8 @@ double calc_lnZ(const DiscreteAxis2D& DOS,
   return lnZ;
 }
 
+/// same as calc_lnZ(const DiscreteAxis2D& DOS, const std::pair<double,
+/// double>& Parameter) but only over the reduced set of histogram entries
 template <class TEnsemble>
 double calc_lnZ_reduced(const DiscreteAxis2D& DOS, const HistInfo2D& HistInfo,
                         const std::pair<double, double>& Parameter) {
@@ -304,7 +310,9 @@ double calc_lnZ_reduced(const DiscreteAxis2D& DOS, const HistInfo2D& HistInfo,
   return lnZ;
 }
 
-/// TODO: use HistInfos for each parameter instead of whole area from HistInfo
+// TODO: use HistInfos for each parameter instead of whole area from HistInfo
+/// same as calc_lnZ(const DiscreteAxis2D& DOS, const std::pair<double,
+/// double>& Parameter but for a whole set of parameters at once
 template <class TEnsemble>
 vec1<double> calc_lnZ(const DiscreteAxis2D& DOS,
                       const vec1<std::pair<double, double>>& Parameters) {
@@ -326,6 +334,9 @@ vec1<double> calc_lnZ(const DiscreteAxis2D& DOS,
   return lnZ;
 }
 
+///same as calc_lnZ_reduced(const DiscreteAxis2D& DOS, const HistInfo2D&
+///HistInfo, const std::pair<double, double>& Parameter) { but for a whole set
+///of parameters at once
 template <class TEnsemble>
 vec1<double> calc_lnZ_reduced(
     const DiscreteAxis2D& DOS, const vec1<HistInfo2D>& HistInfos,
@@ -349,6 +360,9 @@ vec1<double> calc_lnZ_reduced(
   return lnZ;
 }
 
+/// same as calc_lnZ_reduced(const DiscreteAxis2D& DOS, const vec1<HistInfo2D>&
+/// HistInfos, const vec1<std::pair<double, double>>& Parameters)
+/// but incoperating the overlap of the histograms
 template <class TEnsemble>
 vec1<double> calc_lnZ_reduced(const DiscreteAxis2D& DOS,
                               const vec1<HistInfo2D>& HistInfos,
@@ -395,6 +409,7 @@ vec1<double> calc_lnZ_reduced(const DiscreteAxis2D& DOS,
   return lnZ;
 }
 
+/// calculates the deviation between two vectors of lnZ
 /// assumption lnZ[0] = 0
 double deviation(const vec1<double>& lnZ_old, const vec1<double>& lnZ_new) {
   assert(lnZ_old.size() == lnZ_new.size());
@@ -408,6 +423,7 @@ double deviation(const vec1<double>& lnZ_old, const vec1<double>& lnZ_new) {
   return dev;
 }
 
+/// one iteration step in the WHAM procedure
 template <class TEnsemble>
 void iterate_logDOS(const DiscreteAxis2D& Histogram, const HistInfo2D& HistInfo,
                     const vec1<HistInfo2D>& HistInfos,
@@ -439,6 +455,10 @@ void iterate_logDOS(const DiscreteAxis2D& Histogram, const HistInfo2D& HistInfo,
   }
 }
 
+/// calculates the logathmic density of states (DOS) from 
+/// a given set of histograms an lnZ
+/// 
+/// full means do not use any overlap or histogram boundaries
 template <class TEnsemble>
 void calc_logDOS_full(const DiscreteAxis2D& Histogram,
                       const HistInfo2D& HistInfo,
@@ -475,6 +495,7 @@ void calc_logDOS_full(const DiscreteAxis2D& Histogram,
   normalize_logDOS(logDOS, lnZ);
 }
 
+/// same as calc_logDOS_reduced but i
 template <class TEnsemble>
 void calc_logDOS_reduced(const DiscreteAxis2D& Histogram,
                          const HistInfo2D& HistInfo,
