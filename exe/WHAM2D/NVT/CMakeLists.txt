@@ -27,3 +27,6 @@ compile(reweight_prob)
 
 compile(logWeightOfE)
 compile(InverseBetaMicro)
+
+compile(searchMinMax)
+compile(canonical)
