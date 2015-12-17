@@ -29,6 +29,11 @@ namespace consus
 
 namespace impl {
 
+/// helper function if the given columns exists and sort them
+///
+/// exit the program if any given column exeeds the given max_size
+/// \param use_cols - vector containing the coloums which should be checked
+/// \param max_size - no column shoud be greator or equal to max_size
 bool check_and_sort_columns(std::vector<size_t>& use_cols, size_t max_size) {
   auto it = std::find_if(
       use_cols.begin(), use_cols.end(),
@@ -67,6 +72,7 @@ template <class T = double>
 std::vector<std::vector<T>> read_ssv(const std::string& filename,
                                      std::vector<size_t> use_cols = {}) {
   std::string content;
+  // if file ends with gz, teat as gziped file
   if (boost::iends_with(filename, ".gz")) {
     std::ifstream infile(filename, std::ios::in | std::ios::binary);
     if (infile) {
@@ -80,6 +86,7 @@ std::vector<std::vector<T>> read_ssv(const std::string& filename,
       std::cerr << filename << "does not exists\n";
       std::exit(1);
     }
+  // in all oher cases treat as text file
   } else {
     std::ifstream infile(filename, std::ios::in);
     if (infile) {
@@ -105,12 +112,14 @@ std::vector<std::vector<T>> read_ssv(const std::string& filename,
   std::string::const_iterator startit = content.begin();
   std::string::const_iterator endit = content.end();
   std::vector<std::vector<T>> v;
+  // parse complete file using boost::spirit::qi
   bool r = phrase_parse(startit, endit, (repeat[(repeat[double_] >> eol)]),
                         blank | '#' >> *(char_ - eol) >> eol, v);
   if(not r or startit != endit){
     std::cerr << "error on parsing file" << filename << "\n";
     std::exit(1);
   }
+  // check if rows have same size
   size_t columns = v[0].size();
   for(size_t i=0; i < v.size(); ++i){
     if (columns != v[i].size()){
@@ -144,6 +153,7 @@ std::vector<std::vector<T>> read_ssv(const std::string& filename,
   return vT;
 }
 
+/// same as read_ssv but skips one jackknie block
 template <class T = double>
 std::vector<std::vector<T>> read_ssv_jk(const std::string& filename,
                                         size_t num_bin, size_t num_bins,
