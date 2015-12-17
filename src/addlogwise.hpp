@@ -3,6 +3,7 @@
 #include <cmath>
 #include <limits>
 
+/// represent the logarithmic value closest to 0
 template <class T = double>
 constexpr T log_zero() {
   return std::numeric_limits<T>::lowest();
@@ -10,7 +11,7 @@ constexpr T log_zero() {
 
 /// adding two logarithmic numbers log(a+b) = addlogwise(log(a), log(b))
 ///
-/// Requirements T: floating point type
+/// \tparam T: floating point type (double/float)
 /// TODO: maybe use __builtin_expect since a > b in almost all cases
 /// TODO: can be optimized if std::exp(x) = 0, return value don't need log1p(exp())
 template <class T>
