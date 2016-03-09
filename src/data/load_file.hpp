@@ -50,27 +50,7 @@ bool check_and_sort_columns(std::vector<size_t>& use_cols, size_t max_size) {
   return true;
 }
 
-}
-
-// TODO: refactor read_ssv and read_ssv_jk, nearly identical -> identical
-//       parts should use same functions
-// TODO: read_header is not necessary, read_ssv should return std::pair<vec2d, header>
-// TODO: if the first line which is not a comment is parsed by hand, one can estimate
-//       the number of elements and do a reserve on the corresponding vector
-// TODO: atm only ascii and .gz data can be read in, no problem to add bz2 or something else
-
-/// read file with space separated values
-///
-/// all line which starts with # will be ignored
-/// data will be transposed so that the return value is a
-/// 2 dim vector, where every vector contains 1 row, by convention each row is a
-/// single time series
-/// this function allocates temporarily two times the size of the file as memory
-/// \param filename - name of the file which will be read in and parsed
-/// TODO: parse atm every value as double and convert to T: should be changed
-template <class T = double>
-std::vector<std::vector<T>> read_ssv(const std::string& filename,
-                                     std::vector<size_t> use_cols = {}) {
+std::string read_content(const std::string& filename){
   std::string content;
   // if file ends with gz, teat as gziped file
   if (boost::iends_with(filename, ".gz")) {
@@ -96,11 +76,45 @@ std::vector<std::vector<T>> read_ssv(const std::string& filename,
       infile.read(&content[0], content.size());
       infile.close();
     } else {
-      std::cerr << filename << "does not exists\n";
-      std::exit(1);
+      // nasty workaround
+      std::ifstream infile(filename + ".gz", std::ios::in | std::ios::binary);
+      if (infile){
+        boost::iostreams::filtering_streambuf<boost::iostreams::input> buf;
+        buf.push(boost::iostreams::gzip_decompressor());
+        buf.push(infile);
+        std::stringstream ss(std::ios::in | std::ios::out | std::ios::binary);
+        boost::iostreams::copy(buf, ss);
+        content = ss.str();
+      }else{
+        std::cerr << filename << " (.gz) does not exists\n";
+        std::exit(1);
+      }
     }
   }
+  return content;
+}
 
+}
+
+// TODO: refactor read_ssv and read_ssv_jk, nearly identical -> identical
+//       parts should use same functions
+// TODO: read_header is not necessary, read_ssv should return std::pair<vec2d, header>
+// TODO: if the first line which is not a comment is parsed by hand, one can estimate
+//       the number of elements and do a reserve on the corresponding vector
+// TODO: atm only ascii and .gz data can be read in, no problem to add bz2 or something else
+
+/// read file with space separated values
+///
+/// all line which starts with # will be ignored
+/// data will be transposed so that the return value is a
+/// 2 dim vector, where every vector contains 1 row, by convention each row is a
+/// single time series
+/// this function allocates temporarily two times the size of the file as memory
+/// \param filename - name of the file which will be read in and parsed
+/// TODO: parse atm every value as double and convert to T: should be changed
+template <class T = double>
+std::vector<std::vector<T>> read_ssv(const std::string& filename,
+                                     std::vector<size_t> use_cols = {}) {
   using boost::spirit::qi::double_;
   using boost::spirit::qi::eol;
   using boost::spirit::qi::repeat;
@@ -109,6 +123,8 @@ std::vector<std::vector<T>> read_ssv(const std::string& filename,
   using boost::spirit::ascii::space;
   using boost::spirit::ascii::blank;
   using boost::spirit::ascii::char_;
+  auto content = impl::read_content(filename);
+
   std::string::const_iterator startit = content.begin();
   std::string::const_iterator endit = content.end();
   std::vector<std::vector<T>> v;
@@ -158,34 +174,6 @@ template <class T = double>
 std::vector<std::vector<T>> read_ssv_jk(const std::string& filename,
                                         size_t num_bin, size_t num_bins,
                                         std::vector<size_t> use_cols = {}) {
-  std::string content;
-  if (boost::iends_with(filename, ".gz")) {
-    std::ifstream infile(filename, std::ios::in | std::ios::binary);
-    if (infile) {
-      boost::iostreams::filtering_streambuf<boost::iostreams::input> buf;
-      buf.push(boost::iostreams::gzip_decompressor());
-      buf.push(infile);
-      std::stringstream ss(std::ios::in | std::ios::out | std::ios::binary);
-      boost::iostreams::copy(buf, ss);
-      content = ss.str();
-    } else {
-      std::cerr << filename << "does not exists\n";
-      std::exit(1);
-    }
-  } else {
-    std::ifstream infile(filename, std::ios::in);
-    if (infile) {
-      infile.seekg(0, std::ios::end);
-      content.resize(infile.tellg());
-      infile.seekg(0, std::ios::beg);
-      infile.read(&content[0], content.size());
-      infile.close();
-    } else {
-      std::cerr << filename << "does not exists\n";
-      std::exit(1);
-    }
-  }
-
   using boost::spirit::qi::double_;
   using boost::spirit::qi::eol;
   using boost::spirit::qi::repeat;
@@ -194,6 +182,8 @@ std::vector<std::vector<T>> read_ssv_jk(const std::string& filename,
   using boost::spirit::ascii::space;
   using boost::spirit::ascii::blank;
   using boost::spirit::ascii::char_;
+
+  auto content = impl::read_content(filename);
   std::string::const_iterator startit = content.begin();
   std::string::const_iterator endit = content.end();
   std::vector<std::vector<T>> v;
@@ -262,34 +252,9 @@ std::vector<std::vector<T>> read_ssv_jk(const std::string& filename,
 /// \param filename - name of the file which is be parsed
 std::vector<std::string> read_header(const std::string& filename,
                                      std::vector<int> use_cols = {}) {
-  std::string content;
+  std::string content = impl::read_content(filename);
   std::stringstream data;
-  if (boost::iends_with(filename, ".gz")) {
-    std::ifstream infile(filename, std::ios::in | std::ios::binary);
-    if (infile) {
-      boost::iostreams::filtering_streambuf<boost::iostreams::input> buf;
-      buf.push(boost::iostreams::gzip_decompressor());
-      buf.push(infile);
-      std::stringstream ss(std::ios::in | std::ios::out | std::ios::binary);
-      boost::iostreams::copy(buf, ss);
-      content = ss.str();
-    } else {
-      std::cerr << filename << "does not exists\n";
-      std::exit(1);
-    }
-  } else {
-    std::ifstream infile(filename, std::ios::in);
-    if (infile) {
-      infile.seekg(0, std::ios::end);
-      content.resize(infile.tellg());
-      infile.seekg(0, std::ios::beg);
-      infile.read(&content[0], content.size());
-      infile.close();
-    } else {
-      std::cerr << filename << "does not exists\n";
-      std::exit(1);
-    }
-  }
+
   std::string line;
   std::string lastline;
   data << content;

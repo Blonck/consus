@@ -18,7 +18,7 @@ typedef std::chrono::high_resolution_clock myclock;
 
 int main(int argc, char const *argv[])
 {
-  if (argc < 5){
+  if (argc != 3){
     std::cerr << "wrong number of arguments\n";
     std::exit(1);
   }

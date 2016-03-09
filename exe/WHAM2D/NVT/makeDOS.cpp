@@ -4,12 +4,12 @@
 #include <iostream>
 #include <chrono>
 #include <regex>
-#include "../../src/data/load_file.hpp"
-#include "../../src/data/all_matching.hpp"
-#include "../../src/vector/helper.hpp"
-#include "../../src/DiscreteAxis2D.hpp"
-#include "../../src/WHAM2D/WHAM2D.hpp"
-#include "../../src/eigenvalues/add_eigenvalues.hpp"
+#include "../../../src/data/load_file.hpp"
+#include "../../../src/data/all_matching.hpp"
+#include "../../../src/vector/helper.hpp"
+#include "../../../src/DiscreteAxis2D.hpp"
+#include "../../../src/WHAM2D/WHAM2D.hpp"
+#include "../../../src/eigenvalues/add_eigenvalues.hpp"
 
 #include "boost/filesystem.hpp"
 

@@ -30,3 +30,4 @@ compile(InverseBetaMicro)
 
 compile(searchMinMax)
 compile(canonical)
+compile(canonical_dT)
