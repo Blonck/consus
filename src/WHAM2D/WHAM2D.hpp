@@ -10,6 +10,7 @@
 #include "../DiscreteAxis2D.hpp"
 #include "../vector/helper.hpp"
 #include "../addlogwise.hpp"
+#include "../optimization.hpp"
 
 #include "dlib/time_this.h"
 
@@ -423,6 +424,14 @@ double deviation(const vec1<double>& lnZ_old, const vec1<double>& lnZ_new) {
   return dev;
 }
 
+double maxdev(const vec1<double>& lnZ_old, const vec1<double>& lnZ_new){
+  double max = std::abs(lnZ_old[0] - lnZ_new[0]);
+  for (size_t i = 1; i < lnZ_new.size(); ++i){
+    max = std::max(max, std::abs(lnZ_old[i] - lnZ_new[i]));
+  }
+  return max;
+}   
+
 /// one iteration step in the WHAM procedure
 template <class TEnsemble>
 void iterate_logDOS(const DiscreteAxis2D& Histogram, const HistInfo2D& HistInfo,
@@ -480,6 +489,7 @@ void calc_logDOS_full(const DiscreteAxis2D& Histogram,
     dev = deviation(lnZ, new_lnZ);
     std::swap(lnZ, new_lnZ);
     std::cout << count << ": " << dev << " " << devmax << " - full, forced\n";
+    std::cout << maxdev(lnZ, new_lnZ) << "\n";
     ++count;
   }
   while(dev > devmax){
@@ -489,6 +499,7 @@ void calc_logDOS_full(const DiscreteAxis2D& Histogram,
     dev = deviation(lnZ, new_lnZ);
     lnZ.swap(new_lnZ);
     std::cout << count << ": "<< dev << " " << devmax << " - full\n";
+    std::cout << maxdev(lnZ, new_lnZ) << "\n";
     ++count;
   };
 
@@ -512,6 +523,7 @@ void calc_logDOS_reduced(const DiscreteAxis2D& Histogram,
     dev = deviation(lnZ, new_lnZ);
     lnZ.swap(new_lnZ);
     std::cout << count << ": " << dev << " " << devmax << " - reduced\n";
+    std::cout << maxdev(lnZ, new_lnZ) << "\n";
     ++count;
   } while(dev > devmax);
   normalize_logDOS(logDOS, lnZ);
@@ -534,11 +546,80 @@ void calc_logDOS_reduced(const DiscreteAxis2D& Histogram,
                                                Overlap, treshold, lnZ);
     dev = deviation(lnZ, new_lnZ);
     std::cout << count << ": " << dev << " " << devmax << " - reduced, overlap\n";
+    std::cout << maxdev(lnZ, new_lnZ) << "\n";
     lnZ.swap(new_lnZ);
     ++count;
   } while(dev > devmax);
   normalize_logDOS(logDOS, lnZ);
 }
+
+//typedef dlib::matrix<double, 0, 1> column_vector;
+
+//template <class TEnsemble>
+//void calc_logDOS_full_lbfgs(const DiscreteAxis2D& Histogram,
+//                            const HistInfo2D& HistInfo,
+//                            const vec1<HistInfo2D>& HistInfos,
+//                            const vec1<std::pair<double, double>>& Parameters,
+//                            const double devmax, const int min_iteration,
+//                            vec1<double>& lnZ, DiscreteAxis2D& logDOS) {
+//  column_vector starting_point(lnZ.size());
+//  std::copy(lnZ.begin(), lnZ.end(), starting_point.begin());
+//  calc_J_lnZ<TEnsemble> func = calc_J_lnZ<TEnsemble>{Histogram, HistInfo, HistInfos, Parameters};
+//  dlib::find_min_using_approximate_derivatives(
+//      dlib::lbfgs_search_strategy(10),
+//      dlib::objective_delta_stop_strategy(devmax).be_verbose(), func,
+//      starting_point, -1);
+//  std::copy(starting_point.begin(), starting_point.end(), lnZ.begin());
+//  std::cout << func(starting_point) << "\n";
+//  iterate_logDOS<TEnsemble>(Histogram, HistInfo, HistInfos, Parameters, lnZ, logDOS);
+//  normalize_logDOS(logDOS, lnZ);
+//}
+
+template <class TEnsemble>
+void calc_logDOS_full_broydn2(const DiscreteAxis2D& Histogram,
+                              const HistInfo2D& HistInfo,
+                              const vec1<HistInfo2D>& HistInfos,
+                              const vec1<std::pair<double, double>>& Parameters,
+                              const double devmax, vec1<double>& lnZ,
+                              DiscreteAxis2D& logDOS) {
+  std::cout << "start broydn2\n";
+  auto func = [&Histogram, &HistInfo, &HistInfos, &Parameters, &logDOS](vec1<double>& lnZ) -> vec1<double>{
+    iterate_logDOS<TEnsemble>(Histogram, HistInfo, HistInfos, Parameters, lnZ,
+                              logDOS);
+    auto diff_lnZ = calc_lnZ<TEnsemble>(logDOS, Parameters);
+    for (size_t i = 0; i < diff_lnZ.size(); ++i){
+      diff_lnZ[i] -= lnZ[i];
+    }
+    return diff_lnZ;
+  };
+  broydn2(lnZ, func, 0.1, devmax, 12);
+  iterate_logDOS<TEnsemble>(Histogram, HistInfo, HistInfos, Parameters, lnZ, logDOS);
+  normalize_logDOS(logDOS, lnZ);
+}
+
+template <class TEnsemble>
+void calc_logDOS_reduced_broydn2(const DiscreteAxis2D& Histogram,
+                         const HistInfo2D& HistInfo,
+                         const vec1<HistInfo2D>& HistInfos,
+                         const vec1<std::pair<double, double>>& Parameters,
+                         const double devmax, vec1<double>& lnZ,
+                         DiscreteAxis2D& logDOS) {
+  std::cout << "start broydn2\n";
+  auto func = [&Histogram, &HistInfo, &HistInfos, &Parameters,
+               &logDOS](vec1<double>& lnZ) -> vec1<double> {
+    iterate_logDOS<TEnsemble>(Histogram, HistInfo, HistInfos, Parameters, lnZ,
+                              logDOS);
+    auto diff_lnZ = calc_lnZ_reduced<TEnsemble>(logDOS, HistInfos, Parameters);
+    for (size_t i = 0; i < diff_lnZ.size(); ++i){
+      diff_lnZ[i] -= lnZ[i];
+    }
+    return diff_lnZ;
+  };
+  broydn2(lnZ, func, 0.1, devmax, 12);
+  iterate_logDOS<TEnsemble>(Histogram, HistInfo, HistInfos, Parameters, lnZ, logDOS);
+  normalize_logDOS(logDOS, lnZ);
+}
+
 } /* end of namespace WHAM2D */ 
 } /* end of namespace consus */ 
 
