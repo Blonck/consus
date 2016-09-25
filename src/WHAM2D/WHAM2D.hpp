@@ -365,8 +365,7 @@ vec1<double> calc_lnZ_reduced(const DiscreteAxis2D& DOS,
     if (Overlap[k] >= treshold) {
       for (int i = HistInfos[k].ffi_first; i <= HistInfos[k].lfi_first; ++i) {
         auto E1 = DOS.get_value_first(i);
-        for (int j = HistInfos[k].ffi_second; j <= HistInfos[k].lfi_second;
-             ++j) {
+        for (int j = HistInfos[k].ffi_second; j <= HistInfos[k].lfi_second; ++j) {
           auto E2 = DOS.get_value_second(j);
           int index = DOS.get_index(i, j);
           lnZ[k] = addlogwise(
@@ -518,6 +517,7 @@ void calc_logDOS_reduced(const DiscreteAxis2D& Histogram,
   } while(dev > devmax);
   normalize_logDOS(logDOS, lnZ);
 }
-} /* end of namespace WHAM2D */ 
-} /* end of namespace consus */ 
 
+} /* end of namespace WHAM2D */ 
+
+} /* end of namespace consus */ 
