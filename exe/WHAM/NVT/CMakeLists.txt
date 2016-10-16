@@ -1,0 +1,16 @@
+include_directories(.)
+
+macro(compile name)
+  add_executable(NVT_${name} "${name}.cpp")
+  target_link_libraries(NVT_${name} ${Boost_LIBRARIES})
+endmacro(compile)
+
+compile(makeHist)
+compile(makeMicroMeans)
+compile(makeDOS)
+compile(makeDOSJK)
+compile(reweight)
+compile(reweight_dT)
+compile(searchMinMax)
+compile(refineDOS)
+compile(refineDOSJK)
