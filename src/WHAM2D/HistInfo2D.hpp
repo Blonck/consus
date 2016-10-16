@@ -2,6 +2,9 @@
 
 #include "../definitions.hpp"
 
+#include <limits>
+#include <iostream>
+
 namespace consus
 {
 
