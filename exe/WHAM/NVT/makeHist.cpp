@@ -15,8 +15,6 @@
 using namespace consus;
 using namespace consus::WHAM;
 
-typedef std::chrono::high_resolution_clock myclock;
-
 int main(int argc, char const *argv[])
 {
   if (argc < 3){
@@ -24,7 +22,7 @@ int main(int argc, char const *argv[])
     std::exit(1);
   }
 
-  constexpr int col_energy = 0;
+  constexpr int col_energy = 2;
   const double num_bins = std::stod(argv[1]);
   assert(num_bins > 9);
 

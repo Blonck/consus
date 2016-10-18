@@ -18,7 +18,7 @@ using namespace consus::WHAM;
 int main()
 {
   int NumBins;
-  const int col_energy = 0;
+  const int col_energy = 2;
 
   std::vector<std::string> filenames;
   Range range;

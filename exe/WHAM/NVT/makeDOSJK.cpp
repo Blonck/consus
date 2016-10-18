@@ -25,7 +25,7 @@ int main(int argc, char const *argv[])
     std::exit(1);
   }
 
-  constexpr int col_energy = 0;
+  constexpr int col_energy = 2;
   const double devmax = std::stod(argv[1]);
   const int NumBins = std::stoi(argv[2]);
 
