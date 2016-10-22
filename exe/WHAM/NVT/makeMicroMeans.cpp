@@ -45,6 +45,7 @@ int main()
   if (add_eig){
     consus::eig::add_eigenvalues_header(header);
   }
+  header.resize(read_ssv(filenames[0]).size());
   std::cout << header << "\n";
 
   vec1<DiscreteAxis> MicroMeans(header.size(), DiscreteAxis(range));
